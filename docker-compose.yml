@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: crewomni_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crewomni
+      POSTGRES_PASSWORD: crewomni_dev
+      POSTGRES_DB: crewomni_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crewomni -d crewomni_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+    driver: local

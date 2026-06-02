@@ -1,0 +1,13 @@
+export const API_KEY_PREFIX_LENGTH = 14
+export const LOCK_DURATION_MS = 15 * 60 * 1000
+export const MAX_FAILED_ATTEMPTS = 5
+export const ACCESS_TOKEN_TTL = '1h'
+export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000
+export const MAX_ACTIVE_AGENTS_PER_TENANT = 10
+export const MAX_CHUNKS_PER_LAYER = 500
+export const CHUNK_SIZE_CHARS = 2048   // ~512 tokens
+export const CHUNK_OVERLAP_CHARS = 200  // ~50 tokens
+export const MIN_CHUNK_CHARS = 50
+export const DEFAULT_TOP_K = 3
+export const DEFAULT_SIMILARITY_THRESHOLD = 0.7
+export const EMBEDDING_DIMENSIONS = 1536

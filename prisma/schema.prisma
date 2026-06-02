@@ -1,0 +1,341 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum TenantStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Niche {
+  REAL_ESTATE
+  ESIGN
+  LEGAL
+  HR
+  SUPPORT
+}
+
+enum UserRole {
+  TENANT_ADMIN
+  TENANT_OPERATOR
+  KDL_APPROVER
+  PLATFORM_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  REVOKED
+}
+
+// ─── Tenant ───────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id             String       @id @default(uuid())
+  slug           String       @unique
+  name           String
+  niche          Niche
+  status         TenantStatus @default(ACTIVE)
+  allowedDomains String[]
+  plan           String       @default("FREE")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  settings      TenantSettings?
+  users         User[]
+  apiKeys       ApiKey[]
+  agents             Agent[]
+  knowledgeDocuments KnowledgeDocument[]
+  conversations      Conversation[]
+  departments        Department[]
+
+  @@map("tenants")
+}
+
+model TenantSettings {
+  id               String  @id @default(uuid())
+  tenantId         String  @unique
+  dpoName          String?
+  dpoEmail         String?
+  privacyPolicyUrl String?
+  dataRetentionDays Int    @default(90)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_settings")
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id             String     @id @default(uuid())
+  tenantId       String?
+  email          String     @unique
+  name           String
+  passwordHash   String
+  role           UserRole
+  status         UserStatus @default(ACTIVE)
+  failedAttempts Int        @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id])
+  refreshTokens RefreshToken[]
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tenantId  String?
+  tokenHash String    @unique
+  family    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([family])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model ApiKey {
+  id         String       @id @default(uuid())
+  tenantId   String
+  keyPrefix  String
+  keyHash    String       @unique
+  status     ApiKeyStatus @default(ACTIVE)
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([keyPrefix])
+  @@index([tenantId])
+  @@map("api_keys")
+}
+
+// ─── Agent ────────────────────────────────────────────────────────────────────
+
+enum AgentType {
+  SDR
+  HELPDESK
+  NEGOTIATION
+  ONBOARDING
+  SUPPORT
+  SALES
+}
+
+enum AgentStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum PromptVersionStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+}
+
+model Agent {
+  id          String      @id @default(uuid())
+  tenantId    String
+  name        String
+  slug        String
+  type        AgentType
+  description String?
+  status      AgentStatus @default(DRAFT)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  promptVersions AgentPromptVersion[]
+  conversations  Conversation[]
+
+  @@unique([tenantId, name])
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("agents")
+}
+
+model AgentPromptVersion {
+  id           String              @id @default(uuid())
+  agentId      String
+  tenantId     String
+  systemPrompt String
+  version      Int
+  status       PromptVersionStatus @default(DRAFT)
+  createdAt    DateTime            @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([tenantId])
+  @@map("agent_prompt_versions")
+}
+
+// ─── Knowledge ────────────────────────────────────────────────────────────────
+
+enum KnowledgeLayer {
+  GLOBAL
+  INDUSTRY
+  TENANT
+  AGENT
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+model KnowledgeDocument {
+  id          String         @id @default(uuid())
+  tenantId    String?
+  agentId     String?
+  layer       KnowledgeLayer
+  title       String
+  content     String
+  contentHash String
+  status      DocumentStatus @default(PENDING)
+  chunksCount Int            @default(0)
+  niche       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  chunks KnowledgeChunk[]
+
+  @@index([tenantId, layer])
+  @@index([contentHash])
+  @@map("knowledge_documents")
+}
+
+model KnowledgeChunk {
+  id         String   @id @default(uuid())
+  documentId String
+  tenantId   String?
+  chunkIndex Int
+  content    String
+  // embedding vector(1536) — adicionado via migration SQL manual
+  createdAt  DateTime @default(now())
+
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([tenantId])
+  @@map("knowledge_chunks")
+}
+
+// ─── Conversation ─────────────────────────────────────────────────────────────
+
+enum ConversationStatus {
+  OPEN
+  CLOSED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model Conversation {
+  id             String             @id @default(uuid())
+  tenantId       String
+  agentId        String
+  externalUserId String?
+  status         ConversationStatus @default(OPEN)
+  messageCount   Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([tenantId])
+  @@index([tenantId, agentId])
+  @@index([externalUserId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String
+  tenantId       String
+  role           MessageRole
+  content        String
+  metadata       Json?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([tenantId])
+  @@map("messages")
+}
+
+// ─── Organization ─────────────────────────────────────────────────────────────
+
+enum DepartmentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Department {
+  id          String           @id @default(uuid())
+  tenantId    String
+  name        String
+  slug        String
+  description String?
+  status      DepartmentStatus @default(ACTIVE)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("departments")
+}
+
+// ─── Audit ────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  tenantId     String?
+  userId       String?
+  action       String
+  resourceId   String?
+  resourceType String?
+  metadata     Json?
+  ip           String?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

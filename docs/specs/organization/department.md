@@ -1,6 +1,6 @@
 # Department
 
-> **Status:** APPROVED
+> **Status:** IMPLEMENTED
 > **Domínio:** organization
 > **Autor:** @crewomni
 > **Data:** 2026-06-01

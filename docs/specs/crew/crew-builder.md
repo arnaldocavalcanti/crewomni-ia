@@ -1,6 +1,6 @@
 # Crew Builder
 
-> **Status:** APPROVED
+> **Status:** IMPLEMENTED
 > **Domínio:** crew
 > **Autor:** @crewomni
 > **Data:** 2026-06-02

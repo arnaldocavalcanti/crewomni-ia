@@ -234,7 +234,7 @@ enum UserRole {
 - `docs/specs/_template.md` — template SDD com 13 seções
 - `docs/adr/001`, `002`, `003`, `004` — decisões técnicas documentadas
 - Vitest configurado com ambiente `node`
-- **202 testes passando** (24 arquivos)
+- **231 testes passando** (32 arquivos)
 
 ### ✅ ADRs
 - `ADR 001` — Decisões técnicas iniciais
@@ -330,7 +330,7 @@ Todos os modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToke
 - `PATCH /api/v1/agents/:id/status`
 
 ### ✅ Prisma Schema
-Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiKey`, `Agent`, `AgentPromptVersion`, `AuditLog`, `Department`
+Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiKey`, `Agent`, `AgentPromptVersion`, `AuditLog`, `Department`, `Crew`, `CrewMember`
 
 > Migration aplicada. Todos os modelos ativos no banco.
 
@@ -349,6 +349,24 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 - `/dashboard/departments` — grid de cards com status accent, empty state, skeleton loading
 - `/dashboard/departments/new` — formulário com preview de slug em tempo real
 
+### ✅ Crew Builder — Fase 1.2 (spec IMPLEMENTED)
+**Entities:** `Crew`, `CrewMember`
+**Enums:** `CrewStatus`, `CrewMemberRole`
+**Use-cases:** `CreateCrew`, `ListCrews`, `GetCrew`, `UpdateCrew`, `DeleteCrew`,
+               `AddAgentToCrew`, `RemoveAgentFromCrew`, `ListCrewMembers`
+**Infra:** `InMemoryCrewRepository`, `InMemoryCrewMemberRepository`,
+           `PrismaCrewRepository`, `PrismaCrewMemberRepository`
+**API routes:**
+- `POST   /api/v1/crews` → cria crew em status DRAFT (201)
+- `GET    /api/v1/crews?departmentId=X` → lista crews do tenant
+- `GET    /api/v1/crews/:id` → detalhe com members incluídos
+- `PATCH  /api/v1/crews/:id` → atualiza name/description/objective/status
+- `DELETE /api/v1/crews/:id` → hard-delete (falha se tiver membros)
+- `POST   /api/v1/crews/:id/members` → adiciona agent (role: DIRECTOR|MEMBER|OBSERVER)
+- `GET    /api/v1/crews/:id/members` → lista membros ordenados por order
+- `DELETE /api/v1/crews/:id/members/:memberId` → remove membro
+**Regras:** máx 1 DIRECTOR por crew · agent multi-crew permitido · isolamento multi-tenant completo
+
 ---
 
 ## 11. O que está pendente (Fase 1)
@@ -363,7 +381,7 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 
 | Fase | O que entra |
 |---|---|
-| **Fase 1.2** | Crew Builder (Crew + CrewMember + Director role na membership) |
+| **✅ Fase 1.2** | Crew Builder — IMPLEMENTADO |
 | **Fase 1.3** | Crew Dashboard (builder visual, visualização de membros) |
 | **Fase 1.4** | Crew Chat básico (routing para director/agente principal) |
 | **Fase 1.5** | Workflow e Handoff entre agentes |

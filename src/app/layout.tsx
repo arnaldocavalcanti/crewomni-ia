@@ -1,33 +1,29 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next'
+import { Inter, Geist_Mono } from 'next/font/google'
+import './globals.css'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const inter = Inter({
+  variable: '--font-sans',
+  subsets: ['latin'],
+  display: 'swap',
+})
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+})
 
 export const metadata: Metadata = {
-  title: "CrewOmni",
-  description: "Plataforma de agentes de IA corporativos",
-};
+  title: 'CrewOmni',
+  description: 'Plataforma de agentes de IA corporativos',
+}
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
-    >
-      <body className="min-h-full bg-background text-foreground">{children}</body>
+    <html lang="pt-BR" className={`${inter.variable} ${geistMono.variable} h-full antialiased`}>
+      <body className="min-h-full bg-background text-foreground font-sans">{children}</body>
     </html>
-  );
+  )
 }

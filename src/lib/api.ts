@@ -102,6 +102,25 @@ export const api = {
     delete: (id: string) =>
       request<void>(`/departments/${id}`, { method: 'DELETE' }),
   },
+
+  // ─── Crews ────────────────────────────────────────────────────────────────
+
+  crews: {
+    list: (departmentId?: string) =>
+      request<CrewItem[]>(departmentId ? `/crews?departmentId=${departmentId}` : '/crews'),
+    get: (id: string) =>
+      request<{ crew: CrewItem; members: CrewMemberItem[] }>(`/crews/${id}`),
+    create: (data: CreateCrewPayload) =>
+      request<CrewItem>('/crews', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Pick<CrewItem, 'name' | 'description' | 'objective' | 'status'>>) =>
+      request<CrewItem>(`/crews/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    addMember: (crewId: string, data: AddCrewMemberPayload) =>
+      request<CrewMemberItem>(`/crews/${crewId}/members`, { method: 'POST', body: JSON.stringify(data) }),
+    listMembers: (crewId: string) =>
+      request<CrewMemberItem[]>(`/crews/${crewId}/members`),
+    removeMember: (crewId: string, memberId: string) =>
+      request<void>(`/crews/${crewId}/members/${memberId}`, { method: 'DELETE' }),
+  },
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -155,3 +174,25 @@ export type DepartmentItem = {
 
 export type CreateDepartmentPayload = { name: string; description?: string }
 export type UpdateDepartmentPayload = { name?: string; description?: string; status?: 'ACTIVE' | 'INACTIVE' }
+
+export type CrewItem = {
+  id: string; tenantId: string; departmentId: string
+  name: string; slug: string; description: string | null
+  objective: string | null; status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
+  createdAt: string; updatedAt: string
+}
+
+export type CrewMemberItem = {
+  id: string; tenantId: string; crewId: string; agentId: string
+  role: 'DIRECTOR' | 'MEMBER' | 'OBSERVER'
+  order: number; isRequired: boolean; createdAt: string
+}
+
+export type CreateCrewPayload = {
+  departmentId: string; name: string; description?: string; objective?: string
+}
+
+export type AddCrewMemberPayload = {
+  agentId: string; role: 'DIRECTOR' | 'MEMBER' | 'OBSERVER'
+  order: number; isRequired?: boolean
+}

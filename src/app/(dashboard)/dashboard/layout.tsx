@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { isAuthenticated, clearAccessToken } from '@/lib/auth'
 import { api } from '@/lib/api'
-import { Bot, MessageSquare, LayoutDashboard, LogOut, Building2 } from 'lucide-react'
+import { Bot, MessageSquare, LayoutDashboard, LogOut, Building2, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { href: '/dashboard/agents', label: 'Agentes', icon: Bot },
   { href: '/dashboard/conversations', label: 'Conversas', icon: MessageSquare },
   { href: '/dashboard/departments', label: 'Departments', icon: Building2 },
+  { href: '/dashboard/crews', label: 'Crews', icon: Users },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

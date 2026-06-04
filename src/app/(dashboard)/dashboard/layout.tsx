@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 
 const NAV = [
   { href: '/dashboard', label: 'Início', icon: LayoutDashboard, exact: true },
@@ -30,10 +31,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter()
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated()) router.replace('/login')
   }, [router])
+
+  useEffect(() => {
+    const done = localStorage.getItem('onboarding_complete')
+    if (!done) setShowOnboarding(true)
+  }, [])
 
   useEffect(() => {
     setDrawerOpen(false)
@@ -118,6 +125,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
 
   return (
+    <>
+      {showOnboarding && (
+        <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+      )}
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-60 flex-shrink-0 flex-col bg-sidebar border-r border-sidebar-border">
@@ -171,5 +182,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
     </div>
+    </>
   )
 }

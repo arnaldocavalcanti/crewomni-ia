@@ -45,7 +45,7 @@ Camadas de conhecimento (5 layers):
 |---|---|
 | Framework | Next.js 16.2.6 (App Router) |
 | Linguagem | TypeScript 5 |
-| Estilo | Tailwind CSS 4 + shadcn/ui (futuro) |
+| Estilo | Tailwind CSS 4 + shadcn/base-ui + Design System Gradient Shell |
 | ORM | Prisma 7.8.0 (adapter-based, sem URL no schema) |
 | Banco de dados | PostgreSQL + pgvector (futuro) |
 | Vetores | pgvector (MVP) → Qdrant (escala) |
@@ -265,17 +265,32 @@ enum UserRole {
 **Utils:** `chunkText` (chunk com overlap)
 
 ### ✅ Dashboard Básico (spec IMPLEMENTED)
-**Stack:** shadcn/ui + lucide-react + Tailwind 4 · dark mode nativo · design system em `docs/product/dashboard-design-system.md`
+**Stack:** shadcn/base-ui + lucide-react + Tailwind 4 · design system Gradient Shell · dark mode via ThemeToggle
 **Telas:**
-- `/login` — formulário email/senha
-- `/dashboard` — home com métricas (agentes ativos, conversas abertas)
+- `/login` — split layout (painel esquerdo com brand + formulário direito)
+- `/dashboard` — home com métricas (agentes ativos, conversas abertas) + EmptyState
 - `/dashboard/agents` — lista de agentes
 - `/dashboard/agents/new` — criar agente (nome, tipo, description, system prompt)
 - `/dashboard/agents/:id` — detalhe + publicar prompt + chat de teste integrado
 - `/dashboard/conversations` — lista de conversas
 - `/dashboard/conversations/:id` — histórico de mensagens
 **Helpers:** `src/lib/api.ts` (fetch com refresh automático), `src/lib/auth.ts` (token em localStorage)
-**Componentes:** `StatusBadge` + primitivos shadcn (Button, Input, Card, Table, Badge, etc.)
+**Componentes:** `StatusBadge`, `EmptyState`, `ThemeToggle` + primitivos shadcn (Button, Input, Card, Table, Badge, etc.)
+
+### ✅ UI Redesign — Gradient Shell (IMPLEMENTED 2026-06-04)
+**Spec:** `docs/superpowers/specs/2026-06-04-ui-redesign-gradient-shell.md`
+**Design:** sistema visual derivado do logo crewomni.ia — gradiente ciano→azul→roxo
+**Mudanças:**
+- **Paleta:** tokens CSS completos em `globals.css` — `--color-cyan: #06C8E8`, `--color-blue: #4F6EF7`, `--color-purple: #7C3AED`, `--gradient-primary` (gradiente 135deg)
+- **Fonte:** Inter (substituiu Geist Sans) — `--font-sans` via `next/font/google`
+- **Modo claro:** padrão. Dark mode opcional via `ThemeToggle` (localStorage `theme`)
+- **Sidebar:** branca (240px), border-right, nav items com barra gradiente no estado ativo, drawer deslizante no mobile
+- **Login:** split layout — painel esquerdo com gradiente + formulário à direita
+- **Button:** variante `gradient` (bg-gradient-primary, text-white, hover:opacity-90)
+- **EmptyState:** componente `src/components/ui/empty-state.tsx` — ícone, título, descrição, CTA
+- **ThemeToggle:** componente `src/components/ui/theme-toggle.tsx` — localStorage + prefers-color-scheme
+- **OnboardingWizard:** `src/components/onboarding/OnboardingWizard.tsx` — 3 passos, firstLogin via `localStorage.onboarding_complete`, barra de progresso gradiente
+- **Dark tokens:** bloco `.dark` completo em `globals.css`
 
 ### ✅ Chat Widget Público (spec IMPLEMENTED)
 **Use-case novo:** `GetAgentBySlug`
@@ -382,7 +397,7 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 | Fase | O que entra |
 |---|---|
 | **✅ Fase 1.2** | Crew Builder — IMPLEMENTADO |
-| **Fase 1.3** | Crew Dashboard (builder visual, visualização de membros) |
+| **✅ Fase 1.3** | UI Redesign Gradient Shell — IMPLEMENTADO |
 | **Fase 1.4** | Crew Chat básico (routing para director/agente principal) |
 | **Fase 1.5** | Workflow e Handoff entre agentes |
 | **Fase 1.6** | Métricas de Crew |
@@ -471,3 +486,9 @@ npx prisma migrate dev --name X  # cria migration (requer DB)
 | `prisma/schema.prisma` | Schema do banco de dados |
 | `src/infrastructure/di/index.ts` | Container de dependências |
 | `.env.example` | Variáveis de ambiente necessárias |
+| `src/app/globals.css` | Tokens CSS do design system Gradient Shell |
+| `src/components/ui/empty-state.tsx` | Componente EmptyState reutilizável |
+| `src/components/ui/theme-toggle.tsx` | Toggle claro/escuro com localStorage |
+| `src/components/onboarding/OnboardingWizard.tsx` | Wizard de onboarding 3 passos |
+| `docs/superpowers/specs/2026-06-04-ui-redesign-gradient-shell.md` | Spec do redesign visual |
+| `docs/superpowers/plans/2026-06-04-ui-redesign-gradient-shell.md` | Plano de implementação do redesign |

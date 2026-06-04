@@ -59,6 +59,8 @@ model Tenant {
   knowledgeDocuments KnowledgeDocument[]
   conversations      Conversation[]
   departments        Department[]
+  crews        Crew[]
+  crewMembers  CrewMember[]
 
   @@map("tenants")
 }
@@ -170,6 +172,7 @@ model Agent {
   tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   promptVersions AgentPromptVersion[]
   conversations  Conversation[]
+  crewMemberships CrewMember[]
 
   @@unique([tenantId, name])
   @@unique([tenantId, slug])
@@ -313,11 +316,69 @@ model Department {
   updatedAt   DateTime         @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  crews  Crew[]
 
   @@unique([tenantId, name])
   @@unique([tenantId, slug])
   @@index([tenantId])
   @@map("departments")
+}
+
+// ─── Crew ─────────────────────────────────────────────────────────────────────
+
+enum CrewStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+enum CrewMemberRole {
+  DIRECTOR
+  MEMBER
+  OBSERVER
+}
+
+model Crew {
+  id           String     @id @default(uuid())
+  tenantId     String
+  departmentId String
+  name         String
+  slug         String
+  description  String?
+  objective    String?
+  status       CrewStatus @default(DRAFT)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  members    CrewMember[]
+
+  @@unique([tenantId, name])
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([departmentId])
+  @@map("crews")
+}
+
+model CrewMember {
+  id         String         @id @default(uuid())
+  tenantId   String
+  crewId     String
+  agentId    String
+  role       CrewMemberRole @default(MEMBER)
+  order      Int            @default(0)
+  isRequired Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  crew   Crew   @relation(fields: [crewId], references: [id], onDelete: Cascade)
+  agent  Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([crewId, agentId])
+  @@index([tenantId])
+  @@index([crewId])
+  @@map("crew_members")
 }
 
 // ─── Audit ────────────────────────────────────────────────────────────────────

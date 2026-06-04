@@ -45,6 +45,18 @@ import { UpdateDepartment } from '@/domains/organization/use-cases/UpdateDepartm
 import { DeleteDepartment } from '@/domains/organization/use-cases/DeleteDepartment'
 import { InMemoryDepartmentRepository } from '@/infrastructure/db/repositories/InMemoryDepartmentRepository'
 import { PrismaDepartmentRepository } from '@/infrastructure/db/repositories/PrismaDepartmentRepository'
+import { CreateCrew } from '@/domains/crew/use-cases/CreateCrew'
+import { ListCrews } from '@/domains/crew/use-cases/ListCrews'
+import { GetCrew } from '@/domains/crew/use-cases/GetCrew'
+import { UpdateCrew } from '@/domains/crew/use-cases/UpdateCrew'
+import { DeleteCrew } from '@/domains/crew/use-cases/DeleteCrew'
+import { AddAgentToCrew } from '@/domains/crew/use-cases/AddAgentToCrew'
+import { RemoveAgentFromCrew } from '@/domains/crew/use-cases/RemoveAgentFromCrew'
+import { ListCrewMembers } from '@/domains/crew/use-cases/ListCrewMembers'
+import { InMemoryCrewRepository } from '@/infrastructure/db/repositories/InMemoryCrewRepository'
+import { InMemoryCrewMemberRepository } from '@/infrastructure/db/repositories/InMemoryCrewMemberRepository'
+import { PrismaCrewRepository } from '@/infrastructure/db/repositories/PrismaCrewRepository'
+import { PrismaCrewMemberRepository } from '@/infrastructure/db/repositories/PrismaCrewMemberRepository'
 
 const usePrisma = !!process.env.DATABASE_URL
 const useOpenAI = !!process.env.OPENAI_API_KEY
@@ -61,6 +73,8 @@ const knowledgeRepo  = usePrisma ? new PrismaKnowledgeDocumentRepository()      
 const vectorRepo         = new InMemoryVectorRepository() // pgvector via SQL raw quando usePrisma (futuro)
 const conversationRepo   = usePrisma ? new PrismaConversationRepository() : new InMemoryConversationRepository()
 const departmentRepo     = usePrisma ? new PrismaDepartmentRepository()   : new InMemoryDepartmentRepository()
+const crewRepo       = usePrisma ? new PrismaCrewRepository()       : new InMemoryCrewRepository()
+const crewMemberRepo = usePrisma ? new PrismaCrewMemberRepository()  : new InMemoryCrewMemberRepository()
 
 // ─── Providers ────────────────────────────────────────────────────────────────
 
@@ -103,6 +117,15 @@ export const di = {
   getDepartment:     new GetDepartment(departmentRepo),
   updateDepartment:  new UpdateDepartment(departmentRepo, auditLogger),
   deleteDepartment:  new DeleteDepartment(departmentRepo, auditLogger),
+  // Crew
+  createCrew:          new CreateCrew(crewRepo, departmentRepo, auditLogger),
+  listCrews:           new ListCrews(crewRepo),
+  getCrew:             new GetCrew(crewRepo, crewMemberRepo),
+  updateCrew:          new UpdateCrew(crewRepo, auditLogger),
+  deleteCrew:          new DeleteCrew(crewRepo, crewMemberRepo, auditLogger),
+  addAgentToCrew:      new AddAgentToCrew(crewRepo, crewMemberRepo, agentRepo, auditLogger),
+  removeAgentFromCrew: new RemoveAgentFromCrew(crewMemberRepo, auditLogger),
+  listCrewMembers:     new ListCrewMembers(crewRepo, crewMemberRepo),
   // Conversation
   listConversations:       new ListConversations(conversationRepo),
   getConversationMessages: new GetConversationMessages(conversationRepo),

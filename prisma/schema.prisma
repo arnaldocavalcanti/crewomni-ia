@@ -381,6 +381,22 @@ model CrewMember {
   @@map("crew_members")
 }
 
+// ─── Qualification ────────────────────────────────────────────────────────────
+
+model QualificationState {
+  id             String   @id @default(uuid())
+  conversationId String   @unique
+  tenantId       String
+  agentId        String
+  stage          String   @default("QUALIFYING")
+  lastIntent     String?
+  fields         Json     @default("{}")
+  updatedAt      DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("qualification_states")
+}
+
 // ─── Audit ────────────────────────────────────────────────────────────────────
 
 model AuditLog {

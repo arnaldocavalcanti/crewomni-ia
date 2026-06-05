@@ -54,3 +54,30 @@ export type UpdateQualificationStateData = {
   lastIntent?: LeadIntent
   fields?: Partial<QualificationFields>
 }
+
+export function emptyQualificationFields(): QualificationFields {
+  return {
+    tipo_empresa: null,
+    numero_colaboradores: null,
+    usa_crm: null,
+    nome_contato: null,
+    telefone: null,
+    email: null,
+    nivel_interesse: null,
+    objecao: null,
+  }
+}
+
+export function mergeQualificationFields(
+  current: QualificationFields,
+  updates: Partial<QualificationFields>,
+): QualificationFields {
+  const result = { ...current }
+  for (const key of Object.keys(updates) as (keyof QualificationFields)[]) {
+    const val = updates[key]
+    if (val !== null && val !== undefined && val !== '') {
+      result[key] = val
+    }
+  }
+  return result
+}

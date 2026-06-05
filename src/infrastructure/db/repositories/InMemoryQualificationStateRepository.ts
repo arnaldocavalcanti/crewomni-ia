@@ -1,41 +1,17 @@
 import { randomUUID } from 'crypto'
 import type {
   QualificationState,
-  QualificationFields,
   CreateQualificationStateData,
   UpdateQualificationStateData,
 } from '@/domains/qualification/entities/QualificationState'
-import { ConversationStage } from '@/domains/qualification/entities/QualificationState'
+import {
+  ConversationStage,
+  emptyQualificationFields,
+  mergeQualificationFields,
+} from '@/domains/qualification/entities/QualificationState'
 import type { IQualificationStateRepository } from '@/domains/qualification/repositories/IQualificationStateRepository'
 
 const store = new Map<string, QualificationState>()
-
-function emptyFields(): QualificationFields {
-  return {
-    tipo_empresa: null,
-    numero_colaboradores: null,
-    usa_crm: null,
-    nome_contato: null,
-    telefone: null,
-    email: null,
-    nivel_interesse: null,
-    objecao: null,
-  }
-}
-
-function mergeFields(
-  current: QualificationFields,
-  updates: Partial<QualificationFields>,
-): QualificationFields {
-  const result = { ...current }
-  for (const key of Object.keys(updates) as (keyof QualificationFields)[]) {
-    const val = updates[key]
-    if (val !== null && val !== undefined && val !== '') {
-      result[key] = val
-    }
-  }
-  return result
-}
 
 export class InMemoryQualificationStateRepository implements IQualificationStateRepository {
   async findByConversation(
@@ -57,7 +33,7 @@ export class InMemoryQualificationStateRepository implements IQualificationState
       agentId: data.agentId,
       stage: ConversationStage.QUALIFYING,
       lastIntent: null,
-      fields: emptyFields(),
+      fields: emptyQualificationFields(),
       updatedAt: new Date(),
     }
     store.set(state.id, state)
@@ -77,7 +53,7 @@ export class InMemoryQualificationStateRepository implements IQualificationState
       ...state,
       ...(data.stage !== undefined ? { stage: data.stage } : {}),
       ...(data.lastIntent !== undefined ? { lastIntent: data.lastIntent } : {}),
-      fields: data.fields ? mergeFields(state.fields, data.fields) : state.fields,
+      fields: data.fields ? mergeQualificationFields(state.fields, data.fields) : state.fields,
       updatedAt: new Date(),
     }
     store.set(id, updated)

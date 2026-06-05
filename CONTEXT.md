@@ -384,6 +384,20 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 
 ---
 
+### ✅ QualificationState (Etapas 1 + 2 IMPLEMENTADAS)
+**Objetivo:** Memória estruturada de qualificação SDR — elimina o agente repetindo perguntas já respondidas.
+**Entities:** `QualificationState` — campos de lead (tipo_empresa, numero_colaboradores, usa_crm, nome_contato, telefone, email, nivel_interesse, objecao), `ConversationStage`, `LeadIntent`
+**Use-cases:** `ExtractAndUpdateState` (chama gpt-4o-mini para extrair campos JSON; merge sem sobrescrever não-nulos; tolerante a falha de LLM)
+**Infra:** `InMemoryQualificationStateRepository`, `PrismaQualificationStateRepository`
+**Migration:** `20260605190000_add_qualification_states` — tabela com JSONB, unique index em conversationId, FK cascade
+**Integração:**
+- `SendMessage` — carrega/cria estado → extração + RAG rodam em **paralelo** via `Promise.allSettled` (≈300ms de ganho por mensagem)
+- `BuildRAGContext` — injeta bloco `---ESTADO DA QUALIFICAÇÃO---` no system prompt com stage, lastIntent e campos não-nulos
+**Helpers compartilhados:** `emptyQualificationFields()` / `mergeQualificationFields()` exportados de `QualificationState.ts`
+**Testes:** 15 novos testes (unit) — inclui merge sem sobrescrita, resiliência a LLM failure, isolamento multi-tenant, paralelismo
+
+---
+
 ## 11. O que está pendente (Fase 1)
 
 | Módulo | Próximos passos |

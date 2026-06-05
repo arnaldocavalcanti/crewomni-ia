@@ -48,6 +48,7 @@ function makeRepos() {
   }
   const promptRepo: IAgentPromptVersionRepository = {
     findActiveByAgent: vi.fn().mockResolvedValue(makeActivePrompt()),
+    findLatestByAgent: vi.fn().mockResolvedValue(null),
     getLatestVersion: vi.fn(),
     create: vi.fn(),
     supersedePrevious: vi.fn(),

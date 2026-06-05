@@ -8,6 +8,7 @@ import type { ILLMProvider, LLMMessage } from '@/shared/types/ILLMProvider'
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import { KnowledgeLayer } from '../entities/KnowledgeDocument'
 import { DEFAULT_TOP_K, DEFAULT_SIMILARITY_THRESHOLD } from '@/shared/constants'
+import type { QualificationState } from '@/domains/qualification/entities/QualificationState'
 
 // ── Token budgets per layer (ADR 004) ─────────────────────────────────────────
 const TOKEN_BUDGET = {
@@ -26,6 +27,7 @@ type BuildRAGContextInput = {
   agentId: string
   message: string
   conversationHistory?: ConversationMessage[]
+  qualificationState?: QualificationState
 }
 
 type ChunkUsage = {
@@ -90,7 +92,7 @@ export class BuildRAGContext {
     const trimmedAgent = applyBudget(agentChunks, TOKEN_BUDGET.AGENT)
 
     // 7. Build system prompt (ADR 004 format)
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, trimmedTenant, trimmedAgent)
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, trimmedTenant, trimmedAgent, input.qualificationState)
 
     // 8. Build messages array: history + current message
     const history = input.conversationHistory ?? []
@@ -153,21 +155,39 @@ function buildSystemPrompt(
   base: string,
   tenantChunks: VectorSearchResult[],
   agentChunks: VectorSearchResult[],
+  qualificationState?: QualificationState,
 ): string {
-  const hasKb = tenantChunks.length > 0 || agentChunks.length > 0
-  if (!hasKb) return base
+  const parts: string[] = [base]
 
-  const parts: string[] = [base, '', '---CONHECIMENTO RELEVANTE---']
-  if (tenantChunks.length > 0) {
-    parts.push('[Base de Conhecimento]')
-    tenantChunks.forEach((c) => parts.push(c.content))
+  if (qualificationState) {
+    const nonNullFields = Object.entries(qualificationState.fields).filter(([, v]) => v !== null)
+    parts.push('', '---ESTADO DA QUALIFICAÇÃO---')
+    parts.push(`Estágio: ${qualificationState.stage}`)
+    if (qualificationState.lastIntent) {
+      parts.push(`Última intenção: ${qualificationState.lastIntent}`)
+    }
+    if (nonNullFields.length > 0) {
+      parts.push('Dados coletados:')
+      nonNullFields.forEach(([k, v]) => parts.push(`  ${k}: ${v}`))
+    }
     parts.push('')
   }
-  if (agentChunks.length > 0) {
-    parts.push('[Instruções Específicas]')
-    agentChunks.forEach((c) => parts.push(c.content))
-    parts.push('')
+
+  const hasKb = tenantChunks.length > 0 || agentChunks.length > 0
+  if (hasKb) {
+    parts.push('---CONHECIMENTO RELEVANTE---')
+    if (tenantChunks.length > 0) {
+      parts.push('[Base de Conhecimento]')
+      tenantChunks.forEach((c) => parts.push(c.content))
+      parts.push('')
+    }
+    if (agentChunks.length > 0) {
+      parts.push('[Instruções Específicas]')
+      agentChunks.forEach((c) => parts.push(c.content))
+      parts.push('')
+    }
   }
+
   return parts.join('\n')
 }
 

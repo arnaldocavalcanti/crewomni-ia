@@ -11,6 +11,7 @@ import { UpdateAgentStatus } from '@/domains/agent/use-cases/UpdateAgentStatus'
 import { IngestDocument } from '@/domains/knowledge/use-cases/IngestDocument'
 import { SearchKnowledge } from '@/domains/knowledge/use-cases/SearchKnowledge'
 import { DeleteDocument } from '@/domains/knowledge/use-cases/DeleteDocument'
+import { ListDocuments } from '@/domains/knowledge/use-cases/ListDocuments'
 import { BcryptPasswordHasher } from '@/infrastructure/auth/BcryptPasswordHasher'
 import { ConsoleAuditLogger } from '@/infrastructure/audit/ConsoleAuditLogger'
 import { PrismaAuditLogger } from '@/infrastructure/audit/PrismaAuditLogger'
@@ -57,6 +58,8 @@ import { InMemoryCrewRepository } from '@/infrastructure/db/repositories/InMemor
 import { InMemoryCrewMemberRepository } from '@/infrastructure/db/repositories/InMemoryCrewMemberRepository'
 import { PrismaCrewRepository } from '@/infrastructure/db/repositories/PrismaCrewRepository'
 import { PrismaCrewMemberRepository } from '@/infrastructure/db/repositories/PrismaCrewMemberRepository'
+import { InMemoryQualificationStateRepository } from '@/infrastructure/db/repositories/InMemoryQualificationStateRepository'
+import { ExtractAndUpdateState } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
 
 const usePrisma = !!process.env.DATABASE_URL
 const useOpenAI = !!process.env.OPENAI_API_KEY
@@ -75,6 +78,7 @@ const conversationRepo   = usePrisma ? new PrismaConversationRepository() : new 
 const departmentRepo     = usePrisma ? new PrismaDepartmentRepository()   : new InMemoryDepartmentRepository()
 const crewRepo       = usePrisma ? new PrismaCrewRepository()       : new InMemoryCrewRepository()
 const crewMemberRepo = usePrisma ? new PrismaCrewMemberRepository()  : new InMemoryCrewMemberRepository()
+const qualStateRepo  = new InMemoryQualificationStateRepository()
 
 // ─── Providers ────────────────────────────────────────────────────────────────
 
@@ -89,12 +93,14 @@ const llmProvider = useOpenAI ? new OpenAILLMProvider() : {
   complete: async () => ({ content: '[LLM não configurado]', model: 'stub', tokensUsed: 0 }),
 }
 
+const extractState = new ExtractAndUpdateState(qualStateRepo, llmProvider)
+
 // ─── Use-cases ────────────────────────────────────────────────────────────────
 
 export const di = {
   // Auth
   authenticateUser:  new AuthenticateUser(userRepo, tokenRepo, auditLogger, passwordHasher),
-  refreshSession:    new RefreshSession(tokenRepo, auditLogger),
+  refreshSession:    new RefreshSession(tokenRepo, auditLogger, userRepo),
   logoutUser:        new LogoutUser(tokenRepo, auditLogger),
   // Tenant
   createTenant:         new CreateTenant(tenantRepo, userRepo, auditLogger, passwordHasher),
@@ -110,6 +116,7 @@ export const di = {
   ingestDocument:    new IngestDocument(knowledgeRepo, vectorRepo, embeddingProvider, auditLogger),
   searchKnowledge:   new SearchKnowledge(vectorRepo, embeddingProvider),
   deleteDocument:    new DeleteDocument(knowledgeRepo, vectorRepo, auditLogger),
+  listDocuments:     new ListDocuments(knowledgeRepo),
   buildRAGContext:         new BuildRAGContext(agentRepo, promptRepo, vectorRepo, embeddingProvider, llmProvider, auditLogger),
   // Organization
   createDepartment:  new CreateDepartment(departmentRepo, auditLogger),
@@ -133,4 +140,4 @@ export const di = {
 }
 
 // SendMessage depende de di.buildRAGContext — resolvido após criação do objeto
-di.sendMessage = new SendMessage(conversationRepo, di.buildRAGContext, auditLogger)
+di.sendMessage = new SendMessage(conversationRepo, di.buildRAGContext, auditLogger, qualStateRepo, extractState)

@@ -3,9 +3,11 @@ import type { IConversationRepository } from '../repositories/IConversationRepos
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import type { BuildRAGContext } from '@/domains/knowledge/use-cases/BuildRAGContext'
 import { ConversationStatus, MessageRole } from '../entities/Conversation'
+import type { IQualificationStateRepository } from '@/domains/qualification/repositories/IQualificationStateRepository'
+import type { ExtractAndUpdateState } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
 
 const MAX_MESSAGES = 200
-const HISTORY_LIMIT = 10
+const HISTORY_LIMIT = 20
 
 type SendMessageInput = {
   tenantId: string
@@ -29,6 +31,8 @@ export class SendMessage {
     private repo: IConversationRepository,
     private ragContext: BuildRAGContext,
     private auditLogger: IAuditLogger,
+    private qualStateRepo: IQualificationStateRepository,
+    private extractState: ExtractAndUpdateState,
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageOutput> {
@@ -62,7 +66,14 @@ export class SendMessage {
 
     const conversationId = conversation.id
 
-    // 3. Persist USER message
+    // 3. Fetch recent history BEFORE persisting so the current message is not duplicated
+    const recentMessages = await this.repo.listRecentMessages(conversationId, HISTORY_LIMIT)
+    const conversationHistory = recentMessages.map((m) => ({
+      role: m.role === MessageRole.USER ? 'user' as const : 'assistant' as const,
+      content: m.content,
+    }))
+
+    // 4. Persist USER message (after fetching history)
     await this.repo.createMessage({
       conversationId,
       tenantId: input.tenantId,
@@ -70,14 +81,27 @@ export class SendMessage {
       content: input.message.trim(),
     })
 
-    // 4. Fetch recent history for RAG
-    const recentMessages = await this.repo.listRecentMessages(conversationId, HISTORY_LIMIT)
-    const conversationHistory = recentMessages.map((m) => ({
-      role: m.role === MessageRole.USER ? 'user' as const : 'assistant' as const,
-      content: m.content,
-    }))
+    // 5. Load or create qualification state
+    let qualState = await this.qualStateRepo.findByConversation(conversationId, input.tenantId)
+    if (!qualState) {
+      qualState = await this.qualStateRepo.create({
+        conversationId,
+        tenantId: input.tenantId,
+        agentId: input.agentId,
+      })
+    }
 
-    // 5. Call RAG — tolerant to LLM failure
+    // 6. Extract and update state (non-critical — keep going if it fails)
+    try {
+      qualState = await this.extractState.execute({
+        state: qualState,
+        message: input.message.trim(),
+      })
+    } catch {
+      // Extraction failure is non-fatal
+    }
+
+    // 7. Call RAG — tolerant to LLM failure
     let reply = ''
     let model = 'unknown'
     let tokensUsed = 0
@@ -90,6 +114,7 @@ export class SendMessage {
         agentId: input.agentId,
         message: input.message.trim(),
         conversationHistory,
+        qualificationState: qualState,
       })
       reply = ragResult.reply
       model = ragResult.model
@@ -100,7 +125,7 @@ export class SendMessage {
       reply = 'Desculpe, ocorreu um erro ao processar sua mensagem.'
     }
 
-    // 6. Persist ASSISTANT message
+    // 8. Persist ASSISTANT message
     const assistantMessage = await this.repo.createMessage({
       conversationId,
       tenantId: input.tenantId,
@@ -109,13 +134,13 @@ export class SendMessage {
       metadata: failed ? { failed: true } : { model, tokensUsed, chunksUsed },
     })
 
-    // 7. Auto-close if message limit reached
+    // 9. Auto-close if message limit reached
     const messageCount = await this.repo.countMessages(conversationId)
     if (messageCount >= MAX_MESSAGES) {
       await this.repo.closeConversation(conversationId, input.tenantId)
     }
 
-    // 8. Audit log
+    // 10. Audit log
     await this.auditLogger.log({
       action: 'conversation.message.sent',
       tenantId: input.tenantId,

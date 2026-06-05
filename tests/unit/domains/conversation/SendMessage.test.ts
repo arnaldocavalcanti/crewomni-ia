@@ -4,6 +4,9 @@ import type { IConversationRepository } from '@/domains/conversation/repositorie
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import { ConversationStatus, MessageRole } from '@/domains/conversation/entities/Conversation'
 import type { BuildRAGContext } from '@/domains/knowledge/use-cases/BuildRAGContext'
+import type { IQualificationStateRepository } from '@/domains/qualification/repositories/IQualificationStateRepository'
+import type { ExtractAndUpdateState } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
+import { ConversationStage } from '@/domains/qualification/entities/QualificationState'
 
 // ─── Factories ────────────────────────────────────────────────────────────────
 
@@ -67,6 +70,43 @@ function makeInput(overrides = {}) {
   }
 }
 
+function makeQualState(overrides = {}) {
+  return {
+    id: 'qs-1',
+    conversationId: 'conv-1',
+    tenantId: 'tenant-1',
+    agentId: 'agent-1',
+    stage: ConversationStage.QUALIFYING,
+    lastIntent: null,
+    fields: {
+      tipo_empresa: null,
+      numero_colaboradores: null,
+      usa_crm: null,
+      nome_contato: null,
+      telefone: null,
+      email: null,
+      nivel_interesse: null,
+      objecao: null,
+    },
+    updatedAt: new Date(),
+    ...overrides,
+  }
+}
+
+function makeQualStateRepo(): IQualificationStateRepository {
+  return {
+    findByConversation: vi.fn().mockResolvedValue(null),
+    create: vi.fn().mockResolvedValue(makeQualState()),
+    update: vi.fn().mockResolvedValue(makeQualState()),
+  }
+}
+
+function makeExtractState(): Pick<ExtractAndUpdateState, 'execute'> {
+  return {
+    execute: vi.fn().mockResolvedValue(makeQualState()),
+  }
+}
+
 // ─── Testes ───────────────────────────────────────────────────────────────────
 
 describe('SendMessage', () => {
@@ -74,12 +114,22 @@ describe('SendMessage', () => {
   let repo: IConversationRepository
   let ragContext: Pick<BuildRAGContext, 'execute'>
   let auditLogger: IAuditLogger
+  let qualStateRepo: IQualificationStateRepository
+  let extractState: Pick<ExtractAndUpdateState, 'execute'>
 
   beforeEach(() => {
     repo = makeRepo()
     ragContext = makeRAG()
     auditLogger = { log: vi.fn() }
-    useCase = new SendMessage(repo, ragContext as BuildRAGContext, auditLogger)
+    qualStateRepo = makeQualStateRepo()
+    extractState = makeExtractState()
+    useCase = new SendMessage(
+      repo,
+      ragContext as BuildRAGContext,
+      auditLogger,
+      qualStateRepo,
+      extractState as unknown as ExtractAndUpdateState,
+    )
   })
 
   // ── Nova conversa ─────────────────────────────────────────────────────────
@@ -244,6 +294,42 @@ describe('SendMessage', () => {
           tokensUsed: 120,
         }),
       })
+    )
+  })
+
+  // ── QualificationState ───────────────────────────────────────────────────
+
+  it('deve criar QualificationState na primeira mensagem de uma nova conversa', async () => {
+    vi.mocked(qualStateRepo.findByConversation).mockResolvedValue(null)
+
+    await useCase.execute(makeInput())
+
+    expect(qualStateRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        agentId: 'agent-1',
+      })
+    )
+  })
+
+  it('deve reusar QualificationState existente em conversas subsequentes', async () => {
+    const existing = makeQualState()
+    vi.mocked(qualStateRepo.findByConversation).mockResolvedValue(existing)
+
+    await useCase.execute(makeInput({ conversationId: 'conv-1' }))
+
+    expect(qualStateRepo.create).not.toHaveBeenCalled()
+  })
+
+  it('deve passar qualificationState para o RAG context', async () => {
+    const state = makeQualState({ fields: { tipo_empresa: 'imobiliária' } })
+    vi.mocked(qualStateRepo.findByConversation).mockResolvedValue(state)
+    vi.mocked(extractState.execute).mockResolvedValue(state)
+
+    await useCase.execute(makeInput({ conversationId: 'conv-1' }))
+
+    expect(ragContext.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ qualificationState: state })
     )
   })
 })

@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { RefreshSession } from '@/domains/auth/use-cases/RefreshSession'
 import type { IRefreshTokenRepository } from '@/domains/auth/repositories/IRefreshTokenRepository'
+import type { IUserRepository } from '@/domains/auth/repositories/IUserRepository'
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
+import { UserRole } from '@/domains/auth/entities/User'
 
 function makeToken(overrides = {}) {
   return {
@@ -24,8 +26,27 @@ function makeRepos() {
     revokeByFamily: vi.fn(),
     revokeAllByUserId: vi.fn(),
   }
+  const userRepo: IUserRepository = {
+    findById: vi.fn().mockResolvedValue({
+      id: 'user-1',
+      email: 'user@test.com',
+      name: 'Test User',
+      tenantId: 'tenant-1',
+      role: UserRole.TENANT_ADMIN,
+      status: 'ACTIVE',
+      passwordHash: 'hash',
+      failedAttempts: 0,
+      lockedUntil: null,
+      tenant: null,
+    }),
+    findByEmail: vi.fn(),
+    incrementFailedAttempts: vi.fn(),
+    resetFailedAttempts: vi.fn(),
+    lockUntil: vi.fn(),
+    create: vi.fn(),
+  }
   const auditLogger: IAuditLogger = { log: vi.fn() }
-  return { tokenRepo, auditLogger }
+  return { tokenRepo, userRepo, auditLogger }
 }
 
 describe('RefreshSession', () => {
@@ -37,7 +58,7 @@ describe('RefreshSession', () => {
     const repos = makeRepos()
     tokenRepo = repos.tokenRepo
     auditLogger = repos.auditLogger
-    useCase = new RefreshSession(tokenRepo, auditLogger)
+    useCase = new RefreshSession(tokenRepo, auditLogger, repos.userRepo)
   })
 
   // ── Spec critério: refresh com token válido ───────────────────────────────

@@ -332,4 +332,36 @@ describe('SendMessage', () => {
       expect.objectContaining({ qualificationState: state })
     )
   })
+
+  it('deve executar extração e RAG em paralelo (ambos iniciados antes de qualquer um resolver)', async () => {
+    const order: string[] = []
+    let resolveExtract!: (v: ReturnType<typeof makeQualState>) => void
+    let resolveRAG!: (v: { reply: string; model: string; tokensUsed: number; chunksUsed: never[] }) => void
+
+    vi.mocked(extractState.execute).mockImplementation(
+      () => new Promise((res) => { order.push('extract-started'); resolveExtract = res }),
+    )
+    vi.mocked(ragContext.execute).mockImplementation(
+      () => new Promise((res) => { order.push('rag-started'); resolveRAG = res }),
+    )
+
+    const promise = useCase.execute(makeInput({ conversationId: 'conv-1' }))
+    await new Promise((res) => setImmediate(res))
+
+    expect(order).toContain('extract-started')
+    expect(order).toContain('rag-started')
+
+    resolveExtract(makeQualState())
+    resolveRAG({ reply: 'ok', model: 'gpt-4o', tokensUsed: 10, chunksUsed: [] })
+    await promise
+  })
+
+  it('deve continuar normalmente se a extração falhar (RAG retorna resposta)', async () => {
+    vi.mocked(extractState.execute).mockRejectedValue(new Error('extraction failed'))
+
+    const result = await useCase.execute(makeInput({ conversationId: 'conv-1' }))
+
+    expect(result.reply).toBe('Resposta do agente.')
+    expect(result.model).toBe('gpt-4o-mini')
+  })
 })

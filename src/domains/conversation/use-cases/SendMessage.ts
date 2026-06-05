@@ -91,36 +91,36 @@ export class SendMessage {
       })
     }
 
-    // 6. Extract and update state (non-critical — keep going if it fails)
-    try {
-      qualState = await this.extractState.execute({
-        state: qualState,
-        message: input.message.trim(),
-      })
-    } catch {
-      // Extraction failure is non-fatal
-    }
-
-    // 7. Call RAG — tolerant to LLM failure
+    // 6. Run extraction and RAG in parallel.
+    // Extraction persists updated state for the NEXT message; RAG uses pre-extraction state.
+    // Promise.allSettled ensures one failure does not cancel the other.
     let reply = ''
     let model = 'unknown'
     let tokensUsed = 0
     let chunksUsed: { layer: string; count: number; totalScore: number }[] = []
     let failed = false
 
-    try {
-      const ragResult = await this.ragContext.execute({
+    const [extractResult, ragResult] = await Promise.allSettled([
+      this.extractState.execute({ state: qualState, message: input.message.trim() }),
+      this.ragContext.execute({
         tenantId: input.tenantId,
         agentId: input.agentId,
         message: input.message.trim(),
         conversationHistory,
         qualificationState: qualState,
-      })
-      reply = ragResult.reply
-      model = ragResult.model
-      tokensUsed = ragResult.tokensUsed
-      chunksUsed = ragResult.chunksUsed
-    } catch {
+      }),
+    ])
+
+    if (extractResult.status === 'fulfilled') {
+      qualState = extractResult.value
+    }
+
+    if (ragResult.status === 'fulfilled') {
+      reply = ragResult.value.reply
+      model = ragResult.value.model
+      tokensUsed = ragResult.value.tokensUsed
+      chunksUsed = ragResult.value.chunksUsed
+    } else {
       failed = true
       reply = 'Desculpe, ocorreu um erro ao processar sua mensagem.'
     }

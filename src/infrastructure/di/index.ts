@@ -59,6 +59,7 @@ import { InMemoryCrewMemberRepository } from '@/infrastructure/db/repositories/I
 import { PrismaCrewRepository } from '@/infrastructure/db/repositories/PrismaCrewRepository'
 import { PrismaCrewMemberRepository } from '@/infrastructure/db/repositories/PrismaCrewMemberRepository'
 import { InMemoryQualificationStateRepository } from '@/infrastructure/db/repositories/InMemoryQualificationStateRepository'
+import { PrismaQualificationStateRepository } from '@/infrastructure/db/repositories/PrismaQualificationStateRepository'
 import { ExtractAndUpdateState } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
 
 const usePrisma = !!process.env.DATABASE_URL
@@ -78,7 +79,9 @@ const conversationRepo   = usePrisma ? new PrismaConversationRepository() : new 
 const departmentRepo     = usePrisma ? new PrismaDepartmentRepository()   : new InMemoryDepartmentRepository()
 const crewRepo       = usePrisma ? new PrismaCrewRepository()       : new InMemoryCrewRepository()
 const crewMemberRepo = usePrisma ? new PrismaCrewMemberRepository()  : new InMemoryCrewMemberRepository()
-const qualStateRepo  = new InMemoryQualificationStateRepository()
+const qualStateRepo = usePrisma
+  ? new PrismaQualificationStateRepository()
+  : new InMemoryQualificationStateRepository()
 
 // ─── Providers ────────────────────────────────────────────────────────────────
 

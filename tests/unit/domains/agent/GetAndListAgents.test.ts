@@ -44,7 +44,7 @@ function makeRepos() {
     countActive: vi.fn(),
     listByTenant: vi.fn().mockResolvedValue([makeAgent(), makeAgent({ id: 'agent-2', name: 'Helpdesk' })]),
     create: vi.fn(),
-    updateStatus: vi.fn(),
+    updateStatus: vi.fn(), update: vi.fn(),
   }
   const promptRepo: IAgentPromptVersionRepository = {
     findActiveByAgent: vi.fn().mockResolvedValue(makeActivePrompt()),

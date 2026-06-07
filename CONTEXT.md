@@ -396,28 +396,235 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 **Helpers compartilhados:** `emptyQualificationFields()` / `mergeQualificationFields()` exportados de `QualificationState.ts`
 **Testes:** 15 novos testes (unit) — inclui merge sem sobrescrita, resiliência a LLM failure, isolamento multi-tenant, paralelismo
 
+### ✅ Agent Roles (IMPLEMENTADO)
+**Entities:** `AgentRole`
+**Use-cases:** `CreateAgentRole`, `ListAgentRoles`
+**Infra:** `InMemoryAgentRoleRepository`, `PrismaAgentRoleRepository`
+**API routes:**
+- `POST /api/v1/agents/roles` → cria role customizado por tenant
+- `GET /api/v1/agents/roles` → lista roles disponíveis
+**Obs.:** `UpdateAgent` (PATCH /api/v1/agents/:id) também implementado para edição de agentes existentes.
+
+### ✅ Crew Chat básico — Fase 1.4 (IMPLEMENTADO)
+**Objetivo:** Routing de mensagens para o agente correto dentro de uma Crew (director/membro).
+**Integração:**
+- `SendMessage` aceita `crewId` opcional — carrega membros da crew e roteia para o agente adequado (DIRECTOR prioritário)
+- `GetCrewBySlug` — busca crew por slug público para o widget
+**Fluxo:** mensagem com `crewId` → busca membros → seleciona agente correto → executa RAG + resposta
+
+### ✅ Workflow e Handoff entre agentes — Fase 1.5 (IMPLEMENTADO)
+**Use-case:** `TransferConversation` — transfere conversa ativa para outro agente da mesma crew
+**Regras:** agente destino deve ser membro da crew · transferência idempotente se mesmo agente · audit log obrigatório
+**Infra:** wired no DI container (`di.transferConversation`)
+**API routes:** integrado via DI — disponível para consumo por rotas futuras de handoff explícito
+
+### ✅ Métricas de Crew — Fase 1.6 (IMPLEMENTADO)
+**Use-case:** `GetCrewMetrics` — agrega total de conversas, conversas ativas, total de mensagens e breakdown por agente
+**Infra:** usa `conversationRepo.countConversationsByCrew` e `countMessagesByCrewAndAgent`
+**API routes:**
+- `GET /api/v1/crews/:id/metrics` → `{ totalConversations, activeConversations, totalMessages, messagesByAgent[] }`
+
 ---
 
 ## 11. O que está pendente (Fase 1)
 
 | Módulo | Próximos passos |
 |---|---|
-| **RLS no PostgreSQL** | Habilitar Row-Level Security nas tabelas com `tenantId` (Fase 2) |
+| **RLS no PostgreSQL** | Row-Level Security nas tabelas com `tenantId` — pré-requisito para produção. Incluído como primeiro item da Fase 2.1. |
 
 ---
 
-## 12. Fases futuras
+## 12. Roadmap de fases
 
-| Fase | O que entra |
+### Fase 1 — Fundação (COMPLETA)
+
+| Sub-fase | O que entrou | Status |
+|---|---|---|
+| 1.0 | Auth, Tenant, Agent Builder, Knowledge Ingest, Dashboard, Chat Widget, RAG, Conversation Audit | ✅ IMPLEMENTADO |
+| 1.2 | Crew Builder (CRUD + membros + API) | ✅ IMPLEMENTADO |
+| 1.3 | UI Redesign — Gradient Shell Design System | ✅ IMPLEMENTADO |
+| 1.4 | Crew Chat básico (routing para director/agente via SendMessage) | ✅ IMPLEMENTADO |
+| 1.5 | Workflow e Handoff entre agentes (TransferConversation) | ✅ IMPLEMENTADO |
+| 1.6 | Métricas de Crew (GetCrewMetrics + /api/v1/crews/:id/metrics) | ✅ IMPLEMENTADO |
+| 1.x | QualificationState SDR (extração paralela + persist JSONB) | ✅ IMPLEMENTADO |
+
+---
+
+### Fase 2 — Infraestrutura Operacional
+
+#### Fase 2.1 — Segurança & Proteção Operacional (PRÓXIMA)
+
+> **Objetivo:** Proteger isolamento multi-tenant e controlar custo operacional antes de qualquer canal externo entrar em produção. **Não é billing comercial** — é infraestrutura de segurança.
+
+**Inclui:**
+- **RLS no PostgreSQL** — Row-Level Security em todas as tabelas com `tenantId` (garante isolamento mesmo com bug de aplicação)
+- **TenantUsageLimit** — limite de mensagens/mês, tokens/mês, custo/mês, rate-limit/min por tenant
+- **TenantUsageCurrent** — contadores atômicos do mês corrente (yearMonth key); acumula dados de consumo real
+- **IUsageLimiter** — check antes de chamar LLM; rejeita com `QUOTA_EXCEEDED` ou `RATE_LIMITED`
+- **IUsageRecorder** — incrementa contadores pós-execução (base de dados para billing futuro)
+- **API routes:** `GET /api/v1/tenants/usage` · `PATCH /api/v1/tenants/:id/usage-limit` (PLATFORM_ADMIN)
+
+> **Spec criada:** `docs/specs/harness/usage-limits.md`  
+> **Nota:** Billing comercial (Stripe, invoices, planos, checkout) é separado e adiado para **Fase 4.x** — após homologação com Devolus e Fast4Sign.
+
+---
+
+#### Fase 2.2 — Agent Harness Core (PLANEJADO)
+
+> **Objetivo:** Camada intermediária entre canais externos e o pipeline de agente — prepara a plataforma para WhatsApp assíncrono e qualquer canal futuro.
+
+**Inclui:**
+- **InboundEvent** — entidade com índice único `(tenantId, provider, providerMessageId)` para idempotência absoluta
+- **IQueueProvider** — interface de fila; `InMemoryQueueProvider` (dev) → BullMQ/Redis (produção)
+- **ReceiveInboundEvent** — valida, armazena bruto, checa idempotência, normaliza, enfileira (< 300ms)
+- **OrchestrateInboundMessage** — worker que orquestra: resolve contato → lifecycle → contexto → agente → trace
+- **Conversation Lifecycle** — 8 estados: `ACTIVE | WAITING_USER | WAITING_AGENT | HANDOFF_REQUESTED | HANDOFF_ACCEPTED | CLOSED | REOPENED | ARCHIVED`; transições validadas; agente bloqueado em `HANDOFF_ACCEPTED`
+- **Contact Identity** — `Contact` + `ContactChannelIdentity`; mesmo número WhatsApp sempre resolve para o mesmo contato
+- **Handoff humano** — `RequestHumanHandoff` + `AcceptHumanHandoff`; motivo obrigatório; audit completo
+- **Retry & DLQ** — 3 tentativas com backoff; `DEAD_LETTER` após falhas; reprocessamento manual por `PLATFORM_ADMIN`
+- **Observabilidade básica** — `AgentExecutionTrace` com tokens, custo estimado, duração, chunks usados (best-effort)
+
+> **ADR criado:** `docs/adr/006-agent-harness-core.md`  
+> **Spec criada:** `docs/specs/harness/inbound-event-processing.md`  
+> **Spec criada:** `docs/specs/harness/conversation-lifecycle.md`  
+> **Spec criada:** `docs/specs/harness/observability-tracing.md`  
+> **Plano criado:** `docs/superpowers/plans/2026-06-07-agent-harness-core.md` (Fases A–I)
+
+---
+
+#### Fase 2.3 — Memory Policy Engine (PLANEJADO)
+
+> **Objetivo:** Política explícita de contexto para conversas longas — sem estourar token limit, com memória durável por contato.
+
+**Inclui:**
+- **ApplyMemoryPolicy** — decide o que entra no prompt: summary + buffer truncado + ContactMemory ACTIVE
+- **ConversationSummary** — resumo progressivo; atualizado após 20 mensagens ou ao fechar conversa; gerado por gpt-4o-mini
+- **ContactMemory** — memória durável por contato; estados `CANDIDATE → APPROVED → ACTIVE`; aprovação humana obrigatória por padrão
+- **TenantMemoryPolicyConfig** — maxBufferTokens, summaryTriggerMessages, enableContactMemory — configurável por tenant
+- **LGPD** — summary nunca inclui PII em texto plano; `shouldPersist=false` descarta automaticamente
+
+> **Spec criada:** `docs/specs/harness/memory-policy-engine.md`
+
+---
+
+#### Fase 2.4 — KDL + Industry KB + Master Agents (FUTURA)
+
+> **Objetivo:** Transformar experiências individuais dos tenants em conhecimento coletivo por nicho — sem violar isolamento.
+
+**Inclui:**
+- **KDL Pipeline** — 5 etapas: coleta → extração de insights → anonimização → aprovação (`KDL_APPROVER`) → publicação na Industry KB
+- **Industry KB** — base de conhecimento coletiva por nicho; alimenta master agents
+- **Master Agents** — agentes por nicho pré-treinados com Industry KB
+- **Opt-out por tenant** — tenant pode não contribuir para KDL sem perder acesso à Industry KB
+
+> **ADR existente:** `docs/adr/005-knowledge-distillation-layer-pipeline.md`
+
+---
+
+### Fase 3 — Omnichannel & Visual Workflows
+
+#### Fase 3.1 — Split-View Dashboard (FUTURA)
+
+> **Objetivo:** Interface operacional para monitorar e gerenciar conversas em tempo real, mostrando estado completo da conversa.
+
+**Inclui:**
+- Split-View: lista de conversas à esquerda + detalhe à direita (sem reload de página)
+- Painel de conversa: mensagens, `ConversationStatus` atual, `QualificationState`, `MemoryContext`, `AgentExecutionTrace`
+- Timeline de lifecycle: visualização dos eventos de transição de estado
+- Ações do operador: aceitar handoff, fechar conversa, aprovar ContactMemory
+- Preview + Form em 2 colunas para configuração de agentes e crews
+
+> **Depende de:** Fase 2.2 (lifecycle) e Fase 2.3 (memory)
+
+---
+
+#### Fase 3.2 — Integração Multicanal (FUTURA)
+
+> **Objetivo:** WhatsApp e e-mail como adapters da Harness Core — canal não chama agente diretamente.
+
+**Arquitetura obrigatória:**
+```
+WhatsApp Webhook → WhatsAppWebhookAdapter → ReceiveInboundEvent → fila → OrchestrateInboundMessage → agente
+E-mail recebido  → EmailWebhookAdapter    → ReceiveInboundEvent → fila → OrchestrateInboundMessage → agente
+```
+
+**Inclui:**
+- `WhatsAppWebhookAdapter` — validação HMAC-SHA256, parse do payload Meta, fire-and-forget
+- `WhatsAppDispatcher` — envia resposta via Meta Cloud API
+- `EmailWebhookAdapter` — adapter para provedores (SendGrid, SES)
+- `EmailDispatcher` — envia e-mail de resposta
+- Configuração de canal por tenant (número WhatsApp, e-mail de envio)
+
+> **Depende de:** Fase 2.1 (quotas), Fase 2.2 (harness completa)  
+> **Nota:** `POST /api/v1/channels/whatsapp/webhook` já está esboçado em `docs/superpowers/plans/2026-06-07-agent-harness-core.md` Fase I
+
+---
+
+#### Fase 3.3 — Visual Workflows com LangGraph (FUTURA)
+
+> **Objetivo:** Workflows visuais com React Flow Canvas que executam **dentro** da harness — não substituem a harness.
+
+**Arquitetura obrigatória:**
+```
+OrchestrateInboundMessage → RouteToAgent (hoje: SendMessage)
+                                  ↓
+                         [Fase 3.3] RouteToWorkflow → LangGraph executor
+```
+
+**Inclui:**
+- React Flow Canvas para desenhar workflows
+- LangGraph como motor de execução de workflows
+- `IWorkflowExecutor` como interface plugável em `OrchestrateInboundMessage`
+- Workflow nodes: LLM call, Tool call, Condition, Human input, Wait
+- Versionamento de workflows
+
+> **Depende de:** Fase 2.2 (harness), Fase 3.1 (UI base)
+
+---
+
+#### Fase 3.4 — Analytics Avançado (FUTURA)
+
+> **Objetivo:** Métricas operacionais e de negócio por canal, agente, tenant e conversa — alimentadas pelos dados da harness.
+
+**Inclui:**
+- Métricas de fila: tamanho, tempo médio de espera, throughput, DLQ
+- Métricas de canal: mensagens recebidas/enviadas por canal/provider
+- Métricas de agente: tokens/conversa, custo/conversa, tempo médio de resposta, taxa de handoff
+- Métricas de tenant: uso mensal vs. quota, custo acumulado
+- Métricas de conversa: duração, turnos, satisfaction score (futuro)
+- Sparklines em tempo real no dashboard
+
+> **Depende de:** Fase 2.1 (quotas), Fase 2.2 (tracing), Fase 3.2 (canais)
+
+---
+
+### Fase 4 — Escala, Especialização e Comercialização
+
+| Módulo | O que entra |
 |---|---|
-| **✅ Fase 1.2** | Crew Builder — IMPLEMENTADO |
-| **✅ Fase 1.3** | UI Redesign Gradient Shell — IMPLEMENTADO |
-| **Fase 1.4** | Crew Chat básico (routing para director/agente principal) |
-| **Fase 1.5** | Workflow e Handoff entre agentes |
-| **Fase 1.6** | Métricas de Crew |
-| **Fase 2** | KDL, Industry KB, Master Agents por nicho, Billing |
-| **Fase 3** | WhatsApp, E-mail, CRM, LangGraph |
-| **Fase 4** | Qdrant, fine-tuning, Mobile SDK |
+| **BullMQ / Redis** | Substituição do `InMemoryQueueProvider` por BullMQ em produção |
+| **Qdrant** | Migração de pgvector → Qdrant para escala de vetores |
+| **Fine-tuning** | Fine-tuning de modelos por nicho com dados da KDL aprovados |
+| **Mobile SDK** | SDK React Native para chat widget mobile |
+| **Fase 4.x — Billing Comercial** | Stripe, planos, invoices, checkout, upgrade/downgrade — lançamento para o mercado |
+
+---
+
+## Dependências entre fases
+
+```
+Fase 1 (COMPLETA)
+  └── Fase 2.1 (RLS + Quotas)           ← pré-requisito para qualquer produção
+        └── Fase 2.2 (Harness Core)      ← pré-requisito para canais externos
+              └── Fase 2.3 (Memory)      ← enriquece o contexto da harness
+              └── Fase 3.2 (WhatsApp)    ← usa a harness como base
+        └── Fase 2.4 (KDL)              ← usa conversas + tracing da harness
+        └── Fase 3.1 (Split-View)       ← exibe dados de lifecycle + memory
+              └── Fase 3.3 (LangGraph)  ← executa dentro da harness
+        └── Fase 3.4 (Analytics)        ← consome dados de todas as fases anteriores
+Fase 4 (Escala + BullMQ)                ← independente, pode ser parcialmente paralela
+  └── Fase 4.x (Billing Comercial)      ← somente após homologação Devolus + Fast4Sign
+```
 
 ---
 

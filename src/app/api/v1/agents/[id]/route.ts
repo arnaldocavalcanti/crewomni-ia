@@ -20,3 +20,16 @@ export async function GET(
     return errorResponse(error)
   }
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const [session, { id }, body] = await Promise.all([getSession(request), params, request.json()])
+    const agent = await di.updateAgent.execute({ agentId: id, tenantId: session.tenantId!, data: body })
+    return Response.json(agent, { status: 200 })
+  } catch (error) {
+    return errorResponse(error)
+  }
+}

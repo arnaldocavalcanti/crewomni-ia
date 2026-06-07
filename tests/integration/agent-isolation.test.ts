@@ -11,7 +11,7 @@ import { PromptVersionStatus } from '@/domains/agent/entities/AgentPromptVersion
  * Spec: docs/specs/agent/create-agent.md — seção 13.
  */
 
-const agentA = {
+const agentA: any = {
   id: 'agent-a',
   tenantId: 'tenant-a',
   name: 'SDR Devolus',
@@ -23,7 +23,7 @@ const agentA = {
   updatedAt: new Date(),
 }
 
-const agentB = {
+const agentB: any = {
   id: 'agent-b',
   tenantId: 'tenant-b',
   name: 'Helpdesk Fast4Sign',
@@ -61,7 +61,7 @@ function makeAgentRepo(): IAgentRepository {
       return Promise.resolve([])
     }),
     create: vi.fn(),
-    updateStatus: vi.fn(),
+    updateStatus: vi.fn(), update: vi.fn(),
   }
 }
 
@@ -71,6 +71,7 @@ function makePromptRepo(): IAgentPromptVersionRepository {
       if (agentId === 'agent-a' && tenantId === 'tenant-a') return Promise.resolve(activePromptA)
       return Promise.resolve(null)
     }),
+    findLatestByAgent: vi.fn(),
     getLatestVersion: vi.fn(),
     create: vi.fn(),
     supersedePrevious: vi.fn(),

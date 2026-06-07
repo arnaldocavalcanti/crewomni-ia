@@ -14,6 +14,7 @@ function makeIsolatedRepo(): IConversationRepository {
     id: 'conv-a',
     tenantId: 'tenant-a',
     agentId: 'agent-1',
+    crewId: null,
     externalUserId: null,
     status: ConversationStatus.OPEN,
     messageCount: 2,
@@ -27,6 +28,7 @@ function makeIsolatedRepo(): IConversationRepository {
       if (id === 'conv-a' && tenantId === 'tenant-a') return Promise.resolve(convTenantA)
       return Promise.resolve(null)
     }),
+    updateConversationAgent: vi.fn(),
     closeConversation: vi.fn(),
     createMessage: vi.fn(),
     listRecentMessages: vi.fn(),
@@ -38,6 +40,8 @@ function makeIsolatedRepo(): IConversationRepository {
     listMessages: vi.fn().mockResolvedValue([
       { id: 'msg-1', conversationId: 'conv-a', tenantId: 'tenant-a', role: MessageRole.USER, content: 'Mensagem secreta da Devolus', metadata: null, createdAt: new Date() },
     ]),
+    countConversationsByCrew: vi.fn().mockResolvedValue({ total: 0, active: 0 }),
+    countMessagesByCrewAndAgent: vi.fn().mockResolvedValue([]),
   }
 }
 

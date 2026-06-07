@@ -14,6 +14,14 @@ export class PrismaAgentPromptVersionRepository implements IAgentPromptVersionRe
     return r ? this.toEntity(r) : null
   }
 
+  async findLatestByAgent(agentId: string, tenantId: string): Promise<AgentPromptVersion | null> {
+    const r = await this.db.agentPromptVersion.findFirst({
+      where: { agentId, tenantId },
+      orderBy: { version: 'desc' },
+    })
+    return r ? this.toEntity(r) : null
+  }
+
   async getLatestVersion(agentId: string): Promise<number> {
     const r = await this.db.agentPromptVersion.findFirst({
       where: { agentId },

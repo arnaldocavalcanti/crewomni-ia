@@ -18,6 +18,7 @@ export class OpenAILLMProvider implements ILLMProvider {
         { role: 'system', content: params.systemPrompt },
         ...params.messages,
       ],
+      tools: params.tools?.length ? params.tools : undefined,
     })
 
     const choice = response.choices[0]
@@ -26,6 +27,7 @@ export class OpenAILLMProvider implements ILLMProvider {
       content: choice.message.content ?? '',
       model: response.model,
       tokensUsed: response.usage?.total_tokens ?? 0,
+      toolCalls: choice.message.tool_calls,
     }
   }
 }

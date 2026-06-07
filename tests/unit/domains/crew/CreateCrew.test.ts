@@ -32,6 +32,7 @@ function makeCrewRepo(): ICrewRepository {
     create:               vi.fn().mockResolvedValue(makeCrew()),
     findById:             vi.fn().mockResolvedValue(null),
     findByName:           vi.fn().mockResolvedValue(null),
+    findBySlug:           vi.fn().mockResolvedValue(null),
     findAllByTenant:      vi.fn().mockResolvedValue([]),
     findAllByDepartment:  vi.fn().mockResolvedValue([]),
     update:               vi.fn(),

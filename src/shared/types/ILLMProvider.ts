@@ -8,12 +8,14 @@ export type LLMCompleteParams = {
   messages: LLMMessage[]
   model?: string
   maxTokens?: number
+  tools?: any[]
 }
 
 export type LLMCompleteResult = {
   content: string
   model: string
   tokensUsed: number
+  toolCalls?: any[]
 }
 
 export interface ILLMProvider {

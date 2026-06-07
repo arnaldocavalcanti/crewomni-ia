@@ -11,6 +11,7 @@ function makeConversation(overrides = {}) {
     id: 'conv-1',
     tenantId: 'tenant-1',
     agentId: 'agent-1',
+    crewId: null,
     externalUserId: null,
     status: ConversationStatus.OPEN,
     messageCount: 4,
@@ -37,12 +38,15 @@ function makeRepo(): IConversationRepository {
   return {
     createConversation: vi.fn(),
     findConversationById: vi.fn().mockResolvedValue(makeConversation()),
+    updateConversationAgent: vi.fn(),
     closeConversation: vi.fn(),
     createMessage: vi.fn(),
     listRecentMessages: vi.fn(),
     countMessages: vi.fn(),
     listConversations: vi.fn().mockResolvedValue({ conversations: [makeConversation()], total: 1 }),
     listMessages: vi.fn().mockResolvedValue([makeMessage()]),
+    countConversationsByCrew: vi.fn().mockResolvedValue({ total: 0, active: 0 }),
+    countMessagesByCrewAndAgent: vi.fn().mockResolvedValue([]),
   }
 }
 

@@ -19,6 +19,7 @@ export type Conversation = {
   id: string
   tenantId: string
   agentId: string
+  crewId: string | null
   externalUserId: string | null
   status: ConversationStatus
   messageCount: number
@@ -39,6 +40,7 @@ export type Message = {
 export type CreateConversationData = {
   tenantId: string
   agentId: string
+  crewId?: string
   externalUserId?: string
 }
 

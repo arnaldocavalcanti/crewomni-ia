@@ -15,6 +15,7 @@ function makeConversation(overrides = {}) {
     id: 'conv-1',
     tenantId: 'tenant-1',
     agentId: 'agent-1',
+    crewId: null,
     externalUserId: null,
     status: ConversationStatus.OPEN,
     messageCount: 0,
@@ -41,12 +42,15 @@ function makeRepo(): IConversationRepository {
   return {
     createConversation: vi.fn().mockResolvedValue(makeConversation()),
     findConversationById: vi.fn().mockResolvedValue(makeConversation()),
+    updateConversationAgent: vi.fn(),
     closeConversation: vi.fn(),
     createMessage: vi.fn().mockResolvedValue(makeMessage()),
     listRecentMessages: vi.fn().mockResolvedValue([]),
     countMessages: vi.fn().mockResolvedValue(0),
     listConversations: vi.fn(),
     listMessages: vi.fn(),
+    countConversationsByCrew: vi.fn().mockResolvedValue({ total: 0, active: 0 }),
+    countMessagesByCrewAndAgent: vi.fn().mockResolvedValue([]),
   }
 }
 
@@ -117,28 +121,36 @@ describe('SendMessage', () => {
   let qualStateRepo: IQualificationStateRepository
   let extractState: Pick<ExtractAndUpdateState, 'execute'>
 
+  let crewMemberRepo: any
+  let transferConversation: any
+
   beforeEach(() => {
     repo = makeRepo()
     ragContext = makeRAG()
     auditLogger = { log: vi.fn() }
     qualStateRepo = makeQualStateRepo()
     extractState = makeExtractState()
+    crewMemberRepo = { findAllByCrew: vi.fn().mockResolvedValue([]) }
+    transferConversation = { execute: vi.fn().mockResolvedValue({}) }
+
     useCase = new SendMessage(
       repo,
       ragContext as BuildRAGContext,
       auditLogger,
       qualStateRepo,
       extractState as unknown as ExtractAndUpdateState,
+      crewMemberRepo,
+      transferConversation,
     )
   })
 
   // ── Nova conversa ─────────────────────────────────────────────────────────
 
   it('deve criar nova conversa quando conversationId ausente', async () => {
-    const result = await useCase.execute(makeInput())
+    const result = await useCase.execute(makeInput({ crewId: 'crew-1' }))
 
     expect(repo.createConversation).toHaveBeenCalledWith(
-      expect.objectContaining({ tenantId: 'tenant-1', agentId: 'agent-1' })
+      expect.objectContaining({ tenantId: 'tenant-1', agentId: 'agent-1', crewId: 'crew-1' })
     )
     expect(result.isNewConversation).toBe(true)
     expect(result.conversationId).toBeDefined()
@@ -363,5 +375,60 @@ describe('SendMessage', () => {
 
     expect(result.reply).toBe('Resposta do agente.')
     expect(result.model).toBe('gpt-4o-mini')
+  })
+
+  // ── Handoff (TransferConversation) ───────────────────────────────────────
+
+  it('deve prover a tool transfer_conversation se a crew tiver mais de 1 membro', async () => {
+    vi.mocked(repo.findConversationById).mockResolvedValue(makeConversation({ crewId: 'crew-1' }))
+    crewMemberRepo.findAllByCrew.mockResolvedValue([
+      { agentId: 'agent-1', role: 'DIRECTOR' },
+      { agentId: 'agent-2', role: 'MEMBER' },
+    ])
+
+    await useCase.execute(makeInput({ conversationId: 'conv-1', crewId: 'crew-1' }))
+
+    expect(ragContext.execute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        crewMembers: expect.arrayContaining([
+          expect.objectContaining({ agentSlug: 'agent-1' }),
+          expect.objectContaining({ agentSlug: 'agent-2' }),
+        ]),
+        tools: expect.arrayContaining([
+          expect.objectContaining({
+            function: expect.objectContaining({ name: 'transfer_conversation' })
+          })
+        ])
+      })
+    )
+  })
+
+  it('deve chamar TransferConversation se o LLM acionar a tool de handoff', async () => {
+    vi.mocked(repo.findConversationById).mockResolvedValue(makeConversation({ crewId: 'crew-1' }))
+    crewMemberRepo.findAllByCrew.mockResolvedValue([
+      { agentId: 'agent-1', role: 'DIRECTOR' },
+      { agentId: 'agent-2', role: 'MEMBER' },
+    ])
+    vi.mocked(ragContext.execute).mockResolvedValue({
+      reply: '',
+      model: 'gpt-4o',
+      tokensUsed: 100,
+      chunksUsed: [],
+      toolCalls: [{
+        function: {
+          name: 'transfer_conversation',
+          arguments: '{"targetAgentSlug":"agent-2"}'
+        }
+      }]
+    })
+
+    const result = await useCase.execute(makeInput({ conversationId: 'conv-1', crewId: 'crew-1' }))
+
+    expect(transferConversation.execute).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      conversationId: 'conv-1',
+      targetAgentId: 'agent-2',
+    })
+    expect(result.reply).toContain('transferindo')
   })
 })

@@ -25,7 +25,7 @@ function makeMember(overrides = {}) {
 describe('ListCrewMembers', () => {
   it('retorna membros ordenados por order', async () => {
     const crewRepo: ICrewRepository = {
-      create: vi.fn(), findByName: vi.fn(), findAllByTenant: vi.fn(),
+      create: vi.fn(), findByName: vi.fn(), findBySlug: vi.fn(), findAllByTenant: vi.fn(),
       findAllByDepartment: vi.fn(), update: vi.fn(), delete: vi.fn(),
       findById: vi.fn().mockResolvedValue(makeCrew()),
     }
@@ -44,7 +44,7 @@ describe('ListCrewMembers', () => {
 
   it('lança CREW_NOT_FOUND para crew de outro tenant', async () => {
     const crewRepo: ICrewRepository = {
-      create: vi.fn(), findByName: vi.fn(), findAllByTenant: vi.fn(),
+      create: vi.fn(), findByName: vi.fn(), findBySlug: vi.fn(), findAllByTenant: vi.fn(),
       findAllByDepartment: vi.fn(), update: vi.fn(), delete: vi.fn(),
       findById: vi.fn().mockResolvedValue(null),
     }

@@ -28,6 +28,8 @@ type BuildRAGContextInput = {
   message: string
   conversationHistory?: ConversationMessage[]
   qualificationState?: QualificationState
+  crewMembers?: { role: string; agentSlug: string; agentName: string }[]
+  tools?: any[]
 }
 
 type ChunkUsage = {
@@ -41,6 +43,7 @@ type BuildRAGContextOutput = {
   model: string
   tokensUsed: number
   chunksUsed: ChunkUsage[]
+  toolCalls?: any[]
 }
 
 export class BuildRAGContext {
@@ -92,7 +95,7 @@ export class BuildRAGContext {
     const trimmedAgent = applyBudget(agentChunks, TOKEN_BUDGET.AGENT)
 
     // 7. Build system prompt (ADR 004 format)
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, trimmedTenant, trimmedAgent, input.qualificationState)
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, trimmedTenant, trimmedAgent, input.qualificationState, input.crewMembers)
 
     // 8. Build messages array: history + current message
     const history = input.conversationHistory ?? []
@@ -104,7 +107,7 @@ export class BuildRAGContext {
     // 9. Call LLM
     let llmResult: Awaited<ReturnType<ILLMProvider['complete']>>
     try {
-      llmResult = await this.llmProvider.complete({ systemPrompt, messages })
+      llmResult = await this.llmProvider.complete({ systemPrompt, messages, tools: input.tools })
     } catch {
       throw new AppError('LLM_PROVIDER_ERROR', 'Falha ao chamar o provedor de LLM.')
     }
@@ -127,6 +130,7 @@ export class BuildRAGContext {
         model: llmResult.model,
         tokensUsed: llmResult.tokensUsed,
         chunkCount: chunksUsed.reduce((acc, c) => acc + c.count, 0),
+        toolCalls: llmResult.toolCalls ? llmResult.toolCalls.length : 0,
       },
     })
 
@@ -135,6 +139,7 @@ export class BuildRAGContext {
       model: llmResult.model,
       tokensUsed: llmResult.tokensUsed,
       chunksUsed,
+      toolCalls: llmResult.toolCalls,
     }
   }
 }
@@ -156,6 +161,7 @@ function buildSystemPrompt(
   tenantChunks: VectorSearchResult[],
   agentChunks: VectorSearchResult[],
   qualificationState?: QualificationState,
+  crewMembers?: { role: string; agentSlug: string; agentName: string }[]
 ): string {
   const parts: string[] = [base]
 
@@ -170,6 +176,16 @@ function buildSystemPrompt(
       parts.push('Dados coletados:')
       nonNullFields.forEach(([k, v]) => parts.push(`  ${k}: ${v}`))
     }
+    parts.push('')
+  }
+
+  if (crewMembers && crewMembers.length > 0) {
+    parts.push('---EQUIPE (CREW)---')
+    parts.push('Você pode transferir a conversa para os seguintes agentes, caso o assunto seja da especialidade deles:')
+    crewMembers.forEach((member) => {
+      parts.push(`- ${member.agentName} (slug: ${member.agentSlug}, role: ${member.role})`)
+    })
+    parts.push('Para transferir, use a tool "transfer_conversation" informando o agentSlug do agente de destino.')
     parts.push('')
   }
 

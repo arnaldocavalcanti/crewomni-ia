@@ -40,10 +40,10 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession(request)
-    const documents = await di.searchKnowledge.execute
-    // listing is handled by knowledge document repository directly in a real impl
-    // for now return empty — full listing use-case will be added with dashboard
-    return Response.json({ documents: [] }, { status: 200 })
+    const { searchParams } = new URL(request.url)
+    const agentId = searchParams.get('agentId') ?? undefined
+    const documents = await di.listDocuments.execute({ tenantId: session.tenantId!, agentId })
+    return Response.json({ documents }, { status: 200 })
   } catch (error) {
     return errorResponse(error)
   }

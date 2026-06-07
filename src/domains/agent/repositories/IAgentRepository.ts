@@ -1,4 +1,4 @@
-import type { Agent, AgentStatus, CreateAgentData } from '../entities/Agent'
+import type { Agent, AgentStatus, CreateAgentData, UpdateAgentData } from '../entities/Agent'
 
 export interface IAgentRepository {
   findById(id: string, tenantId: string): Promise<Agent | null>
@@ -8,4 +8,5 @@ export interface IAgentRepository {
   listByTenant(tenantId: string): Promise<Agent[]>
   create(data: CreateAgentData): Promise<Agent>
   updateStatus(id: string, tenantId: string, status: AgentStatus): Promise<void>
+  update(id: string, tenantId: string, data: UpdateAgentData): Promise<Agent>
 }

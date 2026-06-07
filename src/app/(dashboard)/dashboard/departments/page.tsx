@@ -1,22 +1,55 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { api, type DepartmentItem } from '@/lib/api'
+import { useRouter } from 'next/navigation'
+import { api, type DepartmentItem, ApiError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Building2, Hash, Plus } from 'lucide-react'
+import { Building2, Hash, Pencil, Plus, PowerOff, Power, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function DepartmentsPage() {
+  const router = useRouter()
   const [departments, setDepartments] = useState<DepartmentItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadDepartments = useCallback(() => {
+    setLoading(true)
     api.departments.list()
       .then(setDepartments)
       .catch(() => setDepartments([]))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { loadDepartments() }, [loadDepartments])
+
+  async function handleToggleStatus(dept: DepartmentItem) {
+    setActionLoading(dept.id)
+    try {
+      const updated = await api.departments.update(dept.id, {
+        status: dept.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+      })
+      setDepartments((prev) => prev.map((d) => d.id === updated.id ? updated : d))
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'Erro ao alterar status.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  async function handleDelete(dept: DepartmentItem) {
+    if (!confirm(`Excluir o department "${dept.name}"? Esta ação não pode ser desfeita.`)) return
+    setActionLoading(dept.id)
+    try {
+      await api.departments.delete(dept.id)
+      setDepartments((prev) => prev.filter((d) => d.id !== dept.id))
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'Erro ao excluir.')
+    } finally {
+      setActionLoading(null)
+    }
+  }
 
   return (
     <div className="p-8 space-y-6">
@@ -68,19 +101,56 @@ export default function DepartmentsPage() {
               />
 
               <div className="pl-5 pr-4 py-4 space-y-2">
-                {/* Name + status */}
+                {/* Name + status + actions */}
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-foreground leading-tight">{dept.name}</p>
-                  <span
-                    className={cn(
-                      'text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0',
-                      dept.status === 'ACTIVE'
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : 'bg-muted text-muted-foreground',
-                    )}
-                  >
-                    {dept.status}
-                  </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <p className="text-sm font-medium text-foreground leading-tight truncate">{dept.name}</p>
+                    <span
+                      className={cn(
+                        'text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0',
+                        dept.status === 'ACTIVE'
+                          ? 'bg-emerald-500/10 text-emerald-400'
+                          : 'bg-muted text-muted-foreground',
+                      )}
+                    >
+                      {dept.status}
+                    </span>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <button
+                      onClick={() => router.push(`/dashboard/departments/${dept.id}/edit`)}
+                      disabled={actionLoading === dept.id}
+                      title="Editar"
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-40"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleToggleStatus(dept)}
+                      disabled={actionLoading === dept.id}
+                      title={dept.status === 'ACTIVE' ? 'Desativar' : 'Ativar'}
+                      className={cn(
+                        'p-1.5 rounded-md transition-colors disabled:opacity-40',
+                        dept.status === 'ACTIVE'
+                          ? 'text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10'
+                          : 'text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10',
+                      )}
+                    >
+                      {dept.status === 'ACTIVE'
+                        ? <PowerOff className="w-3.5 h-3.5" />
+                        : <Power className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(dept)}
+                      disabled={actionLoading === dept.id}
+                      title="Excluir"
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Slug */}

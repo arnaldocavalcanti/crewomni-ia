@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { CreateAgent } from '@/domains/agent/use-cases/CreateAgent'
 import type { IAgentRepository } from '@/domains/agent/repositories/IAgentRepository'
+import type { IAgentRoleRepository } from '@/domains/agent/repositories/IAgentRoleRepository'
 import type { IAgentPromptVersionRepository } from '@/domains/agent/repositories/IAgentPromptVersionRepository'
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import { AgentStatus, AgentType } from '@/domains/agent/entities/Agent'
@@ -9,6 +10,16 @@ import { UserRole } from '@/domains/auth/entities/User'
 
 // ─── Factories ───────────────────────────────────────────────────────────────
 
+const mockRole = {
+  id: 'role-1',
+  tenantId: null, // global role
+  name: 'SDR',
+  category: 'Comercial',
+  description: 'Prospecção e qualificação de leads',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}
+
 function makeAgent(overrides = {}) {
   return {
     id: 'agent-1',
@@ -16,8 +27,28 @@ function makeAgent(overrides = {}) {
     name: 'SDR Devolus',
     slug: 'sdr-devolus',
     type: AgentType.SDR,
+    category: 'Comercial',
+    roleId: 'role-1',
+    operationalFunction: 'Conversacional',
     description: null,
     status: AgentStatus.DRAFT,
+    directorId: null,
+    mainChannel: null,
+    toneOfVoice: null,
+    communicationStyle: null,
+    autonomyLevel: null,
+    responsibilities: [],
+    permissionReadKB: true,
+    permissionSendWhatsapp: false,
+    permissionSendEmail: false,
+    permissionExecuteTool: false,
+    permissionCallHuman: false,
+    permissionCreateTask: false,
+    permissionReadHistory: false,
+    permissionReadCommercial: false,
+    outputFormat: null,
+    expectedExamples: null,
+    specificRules: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -42,7 +73,9 @@ function makeInput(overrides = {}) {
     tenantId: 'tenant-1',
     name: 'SDR Devolus',
     slug: 'sdr-devolus',
-    type: AgentType.SDR,
+    category: 'Comercial',
+    roleId: 'role-1',
+    operationalFunction: 'Conversacional',
     systemPrompt: 'Você é um SDR especializado em imóveis.',
     requestedByRole: UserRole.TENANT_ADMIN,
     ...overrides,
@@ -57,16 +90,23 @@ function makeRepos() {
     countActive: vi.fn().mockResolvedValue(0),
     listByTenant: vi.fn(),
     create: vi.fn().mockResolvedValue(makeAgent()),
-    updateStatus: vi.fn(),
+    updateStatus: vi.fn(), update: vi.fn(),
   }
   const promptRepo: IAgentPromptVersionRepository = {
     findActiveByAgent: vi.fn(),
+    findLatestByAgent: vi.fn(),
     getLatestVersion: vi.fn().mockResolvedValue(0),
     create: vi.fn().mockResolvedValue(makePromptVersion()),
     supersedePrevious: vi.fn(),
   }
+  const roleRepo: IAgentRoleRepository = {
+    findById: vi.fn().mockResolvedValue(mockRole),
+    findByName: vi.fn().mockResolvedValue(null),
+    list: vi.fn(),
+    create: vi.fn(),
+  }
   const auditLogger: IAuditLogger = { log: vi.fn() }
-  return { agentRepo, promptRepo, auditLogger }
+  return { agentRepo, promptRepo, roleRepo, auditLogger }
 }
 
 // ─── Testes ──────────────────────────────────────────────────────────────────
@@ -75,14 +115,16 @@ describe('CreateAgent', () => {
   let useCase: CreateAgent
   let agentRepo: IAgentRepository
   let promptRepo: IAgentPromptVersionRepository
+  let roleRepo: IAgentRoleRepository
   let auditLogger: IAuditLogger
 
   beforeEach(() => {
     const repos = makeRepos()
     agentRepo = repos.agentRepo
     promptRepo = repos.promptRepo
+    roleRepo = repos.roleRepo
     auditLogger = repos.auditLogger
-    useCase = new CreateAgent(agentRepo, promptRepo, auditLogger, 10)
+    useCase = new CreateAgent(agentRepo, promptRepo, roleRepo, auditLogger, 10)
   })
 
   // ── Spec critério 1: criação bem-sucedida ─────────────────────────────────
@@ -129,7 +171,7 @@ describe('CreateAgent', () => {
   })
 
   it('deve usar o limite injetado como parâmetro', async () => {
-    const limitedUseCase = new CreateAgent(agentRepo, promptRepo, auditLogger, 2)
+    const limitedUseCase = new CreateAgent(agentRepo, promptRepo, roleRepo, auditLogger, 2)
     vi.mocked(agentRepo.countActive).mockResolvedValue(2)
 
     await expect(limitedUseCase.execute(makeInput())).rejects.toMatchObject({
@@ -168,6 +210,59 @@ describe('CreateAgent', () => {
     await expect(
       useCase.execute(makeInput({ slug: 'SDR Devolus' }))
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' })
+  })
+
+  // ── Roles & Compatibilidade ──────────────────────────────────────────────
+
+  it('deve rejeitar se o papel do agente não existir', async () => {
+    vi.mocked(roleRepo.findById).mockResolvedValue(null)
+
+    await expect(useCase.execute(makeInput())).rejects.toMatchObject({
+      code: 'ROLE_NOT_FOUND',
+    })
+  })
+
+  it('deve rejeitar se o papel pertencer a outro tenant', async () => {
+    vi.mocked(roleRepo.findById).mockResolvedValue({
+      ...mockRole,
+      tenantId: 'outro-tenant',
+    })
+
+    await expect(useCase.execute(makeInput())).rejects.toMatchObject({
+      code: 'ROLE_NOT_FOUND',
+    })
+  })
+
+  it('deve mapear AgentType compatível com base no papel e categoria', async () => {
+    // Caso 1: Suporte / Helpdesk
+    vi.mocked(roleRepo.findById).mockResolvedValue({
+      id: 'role-helpdesk',
+      tenantId: null,
+      name: 'Helpdesk N1',
+      category: 'Suporte',
+      description: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    await useCase.execute(makeInput({ roleId: 'role-helpdesk', category: 'Suporte' }))
+    expect(agentRepo.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: AgentType.HELPDESK })
+    )
+
+    // Caso 2: Atendimento / Onboarding
+    vi.mocked(roleRepo.findById).mockResolvedValue({
+      id: 'role-onboarding',
+      tenantId: null,
+      name: 'Onboarding Agent',
+      category: 'Atendimento',
+      description: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    await useCase.execute(makeInput({ roleId: 'role-onboarding', category: 'Atendimento' }))
+    expect(agentRepo.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ type: AgentType.ONBOARDING })
+    )
   })
 
   // ── Audit log ─────────────────────────────────────────────────────────────

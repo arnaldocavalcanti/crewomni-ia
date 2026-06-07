@@ -38,6 +38,7 @@ export default function NewDepartmentPage() {
     try {
       await api.departments.create({ name: name.trim(), description: description.trim() || undefined })
       router.push('/dashboard/departments')
+      router.refresh()
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.code === 'DEPARTMENT_NAME_TAKEN'

@@ -21,6 +21,7 @@ export class PrismaConversationRepository implements IConversationRepository {
       data: {
         tenantId: data.tenantId,
         agentId: data.agentId,
+        crewId: data.crewId ?? null,
         externalUserId: data.externalUserId ?? null,
       },
     })
@@ -36,6 +37,13 @@ export class PrismaConversationRepository implements IConversationRepository {
     await this.db.conversation.updateMany({
       where: { id, tenantId },
       data: { status: 'CLOSED' },
+    })
+  }
+
+  async updateConversationAgent(id: string, newAgentId: string, tenantId: string): Promise<void> {
+    await this.db.conversation.updateMany({
+      where: { id, tenantId },
+      data: { agentId: newAgentId },
     })
   }
 
@@ -98,16 +106,39 @@ export class PrismaConversationRepository implements IConversationRepository {
     return records.map((r: any) => this.toMessage(r))
   }
 
+  async countConversationsByCrew(crewId: string, tenantId: string): Promise<{ total: number; active: number }> {
+    const [total, active] = await Promise.all([
+      this.db.conversation.count({ where: { crewId, tenantId } }),
+      this.db.conversation.count({ where: { crewId, tenantId, status: 'OPEN' } }),
+    ])
+    return { total, active }
+  }
+
+  async countMessagesByCrewAndAgent(crewId: string, tenantId: string): Promise<{ agentId: string; count: number }[]> {
+    const groups = await this.db.conversation.groupBy({
+      by: ['agentId'],
+      where: { crewId, tenantId },
+      _sum: {
+        messageCount: true,
+      },
+    })
+    return groups.map((g: any) => ({
+      agentId: g.agentId,
+      count: g._sum.messageCount ?? 0,
+    }))
+  }
+
   // ─── Mappers ────────────────────────────────────────────────────────────────
 
   private toConversation(r: {
-    id: string; tenantId: string; agentId: string; externalUserId: string | null
+    id: string; tenantId: string; agentId: string; crewId: string | null; externalUserId: string | null
     status: string; messageCount: number; createdAt: Date; updatedAt: Date
   }): Conversation {
     return {
       id: r.id,
       tenantId: r.tenantId,
       agentId: r.agentId,
+      crewId: r.crewId,
       externalUserId: r.externalUserId,
       status: r.status as ConversationStatus,
       messageCount: r.messageCount,

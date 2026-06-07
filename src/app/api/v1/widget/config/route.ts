@@ -12,9 +12,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const tenantSlug = searchParams.get('tenant')
     const agentSlug = searchParams.get('agent')
+    const crewSlug = searchParams.get('crew')
 
-    if (!tenantSlug || !agentSlug) {
-      throw new AppError('VALIDATION_ERROR', 'Os parâmetros tenant e agent são obrigatórios.')
+    if (!tenantSlug || (!agentSlug && !crewSlug)) {
+      throw new AppError('VALIDATION_ERROR', 'É obrigatório informar o tenant e um agent ou crew.')
     }
 
     // Resolve tenant by public slug (ADR 002)
@@ -24,9 +25,29 @@ export async function GET(request: NextRequest) {
       requestDomain: request.headers.get('origin') ?? '',
     })
 
+    let targetAgentSlug = agentSlug
+
+    // Roteamento via Crew
+    if (!targetAgentSlug && crewSlug) {
+      const crew = await di.getCrewBySlug.execute({
+        slug: crewSlug,
+        tenantId: tenantContext.tenantId,
+      })
+      const director = crew.members.find((m) => m.role === 'DIRECTOR')
+      if (!director) {
+        throw new AppError('CREW_HAS_NO_DIRECTOR', 'A equipe informada não possui um Diretor para iniciar o atendimento.')
+      }
+      
+      const agent = await di.getAgent.execute({ agentId: director.agentId, tenantId: tenantContext.tenantId })
+      if (!agent) {
+        throw new AppError('AGENT_NOT_FOUND', 'Agente do diretor não encontrado.')
+      }
+      targetAgentSlug = agent.slug
+    }
+
     // Find agent by slug within tenant
     const agent = await di.getAgentBySlug.execute({
-      slug: agentSlug,
+      slug: targetAgentSlug!,
       tenantId: tenantContext.tenantId,
     })
 

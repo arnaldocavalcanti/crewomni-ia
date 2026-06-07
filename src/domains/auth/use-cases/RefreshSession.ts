@@ -4,6 +4,7 @@ import { AppError } from '@/shared/errors/AppError'
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import { ACCESS_TOKEN_TTL, REFRESH_TOKEN_TTL_MS } from '@/shared/constants'
 import type { IRefreshTokenRepository } from '../repositories/IRefreshTokenRepository'
+import type { IUserRepository } from '../repositories/IUserRepository'
 
 type RefreshInput = {
   refreshToken: string
@@ -21,6 +22,7 @@ export class RefreshSession {
   constructor(
     private tokenRepo: IRefreshTokenRepository,
     private auditLogger: IAuditLogger,
+    private userRepo: IUserRepository,
   ) {}
 
   async execute(input: RefreshInput): Promise<RefreshOutput> {
@@ -48,9 +50,13 @@ export class RefreshSession {
 
     await this.tokenRepo.revokeById(storedToken.id)
 
+    const user = await this.userRepo.findById(storedToken.userId)
+    if (!user) throw new AppError('SESSION_EXPIRED', 'Usuário não encontrado. Faça login novamente')
+
     const accessToken = await new SignJWT({
       userId: storedToken.userId,
       tenantId: storedToken.tenantId,
+      role: user.role,
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setExpirationTime(ACCESS_TOKEN_TTL)

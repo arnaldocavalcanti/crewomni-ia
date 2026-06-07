@@ -12,6 +12,13 @@ export class InMemoryAgentPromptVersionRepository implements IAgentPromptVersion
     ) ?? null
   }
 
+  async findLatestByAgent(agentId: string, tenantId: string): Promise<AgentPromptVersion | null> {
+    const versions = Array.from(store.values())
+      .filter((pv) => pv.agentId === agentId && pv.tenantId === tenantId)
+      .sort((a, b) => b.version - a.version)
+    return versions[0] ?? null
+  }
+
   async getLatestVersion(agentId: string): Promise<number> {
     const versions = Array.from(store.values()).filter((pv) => pv.agentId === agentId)
     if (versions.length === 0) return 0

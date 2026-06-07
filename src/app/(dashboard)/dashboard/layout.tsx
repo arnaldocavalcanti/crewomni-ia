@@ -19,6 +19,57 @@ import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 
+function SidebarMark({ size = 36 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sm-bg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#060B1A" />
+          <stop offset="100%" stopColor="#0C1230" />
+        </linearGradient>
+        <linearGradient id="sm-c" x1="8" y1="8" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#06D6E3" />
+          <stop offset="50%" stopColor="#3B82F6" />
+          <stop offset="100%" stopColor="#8B5CF6" />
+        </linearGradient>
+        <linearGradient id="sm-ring" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#06D6E3" />
+          <stop offset="100%" stopColor="#8B5CF6" />
+        </linearGradient>
+      </defs>
+      {/* Background */}
+      <rect width="40" height="40" rx="10" fill="url(#sm-bg)" />
+      {/* Outer node ring — 6 nodes */}
+      {/* top */}
+      <circle cx="20" cy="5"  r="2.2" fill="#06D6E3" opacity="0.9" />
+      {/* top-right */}
+      <circle cx="33" cy="12.5" r="1.8" fill="#3B82F6" opacity="0.85" />
+      {/* bottom-right */}
+      <circle cx="33" cy="27.5" r="1.8" fill="#6366F1" opacity="0.8" />
+      {/* bottom */}
+      <circle cx="20" cy="35" r="2.2" fill="#8B5CF6" opacity="0.9" />
+      {/* bottom-left */}
+      <circle cx="7"  cy="27.5" r="1.8" fill="#6366F1" opacity="0.8" />
+      {/* top-left */}
+      <circle cx="7"  cy="12.5" r="1.8" fill="#3B82F6" opacity="0.85" />
+      {/* Connection arcs (subtle dashed) */}
+      <path d="M20 5 Q33 5 33 12.5"    stroke="url(#sm-ring)" strokeWidth="0.8" strokeDasharray="2 2" fill="none" opacity="0.5" />
+      <path d="M33 12.5 Q38 20 33 27.5" stroke="url(#sm-ring)" strokeWidth="0.8" strokeDasharray="2 2" fill="none" opacity="0.5" />
+      <path d="M33 27.5 Q33 35 20 35"  stroke="url(#sm-ring)" strokeWidth="0.8" strokeDasharray="2 2" fill="none" opacity="0.5" />
+      <path d="M20 35 Q7 35 7 27.5"    stroke="url(#sm-ring)" strokeWidth="0.8" strokeDasharray="2 2" fill="none" opacity="0.5" />
+      <path d="M7 27.5 Q2 20 7 12.5"   stroke="url(#sm-ring)" strokeWidth="0.8" strokeDasharray="2 2" fill="none" opacity="0.5" />
+      <path d="M7 12.5 Q7 5 20 5"      stroke="url(#sm-ring)" strokeWidth="0.8" strokeDasharray="2 2" fill="none" opacity="0.5" />
+      {/* Center "C" */}
+      <text x="20" y="25.5" textAnchor="middle" fontSize="17" fontWeight="800"
+        fontFamily="system-ui, -apple-system, sans-serif" fill="url(#sm-c)" letterSpacing="-0.5">
+        C
+      </text>
+      {/* Accent dot */}
+      <circle cx="27" cy="14" r="1" fill="#06D6E3" opacity="0.9" />
+    </svg>
+  )
+}
+
 const NAV = [
   { href: '/dashboard', label: 'Início', icon: LayoutDashboard, exact: true },
   { href: '/dashboard/crews', label: 'Crews', icon: Users },
@@ -55,24 +106,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Brand */}
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-sidebar-border flex-shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm">C</span>
-        </div>
-        <div>
-          <span className="font-bold text-foreground text-sm tracking-tight">crewomni</span>
-          <span
-            className="font-bold text-sm"
-            style={{
-              background: 'var(--gradient-primary)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            .ia
-          </span>
-        </div>
+      <div className="flex items-center justify-center h-24 border-b border-sidebar-border flex-shrink-0 px-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/icon_logo_crewomni.png"
+          alt="crewomni.ia"
+          style={{ width: 72, height: 72, objectFit: 'contain' }}
+        />
       </div>
 
       {/* Nav */}
@@ -169,12 +209,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-gradient-primary flex items-center justify-center">
-              <span className="text-white font-bold text-xs">C</span>
-            </div>
-            <span className="font-bold text-sm text-foreground">crewomni.ia</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo_crewomni.png" alt="crewomni.ia" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
         </header>
 
         <main className="flex-1 overflow-y-auto">

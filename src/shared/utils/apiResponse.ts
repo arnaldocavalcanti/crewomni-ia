@@ -49,9 +49,11 @@ export function errorResponse(error: unknown): Response {
 
 export function refreshTokenCookie(token: string): string {
   const maxAge = 7 * 24 * 60 * 60
-  return `refreshToken=${token}; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=${maxAge}`
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
+  return `refreshToken=${token}; HttpOnly${secure}; SameSite=Lax; Path=/api/v1/auth; Max-Age=${maxAge}`
 }
 
 export function clearRefreshTokenCookie(): string {
-  return `refreshToken=; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=0`
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
+  return `refreshToken=; HttpOnly${secure}; SameSite=Lax; Path=/api/v1/auth; Max-Age=0`
 }

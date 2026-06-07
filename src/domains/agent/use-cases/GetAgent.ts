@@ -22,7 +22,9 @@ export class GetAgent {
     const agent = await this.agentRepo.findById(input.agentId, input.tenantId)
     if (!agent) return null
 
-    const activePromptVersion = await this.promptRepo.findActiveByAgent(input.agentId, input.tenantId)
+    const activePromptVersion =
+      (await this.promptRepo.findActiveByAgent(input.agentId, input.tenantId)) ??
+      (await this.promptRepo.findLatestByAgent(input.agentId, input.tenantId))
 
     return { ...agent, activePromptVersion }
   }

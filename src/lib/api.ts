@@ -72,10 +72,17 @@ export const api = {
     get: (id: string) => request<AgentDetail>(`/agents/${id}`),
     create: (data: CreateAgentPayload) =>
       request<AgentListItem>('/agents', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<CreateAgentPayload>) =>
+      request<AgentDetail>(`/agents/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     publishPrompt: (id: string, systemPrompt: string) =>
       request(`/agents/${id}/prompt`, { method: 'PATCH', body: JSON.stringify({ systemPrompt }) }),
     updateStatus: (id: string, status: string) =>
       request(`/agents/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+    roles: {
+      list: () => request<AgentRoleItem[]>('/agents/roles'),
+      create: (data: { name: string; category: string; description?: string }) =>
+        request<AgentRoleItem>('/agents/roles', { method: 'POST', body: JSON.stringify(data) }),
+    },
   },
 
   // ─── Conversations ─────────────────────────────────────────────────────────
@@ -90,6 +97,38 @@ export const api = {
       request<SendMessageOutput>('/conversations/message', { method: 'POST', body: JSON.stringify(payload) }),
   },
 
+  // ─── Knowledge ────────────────────────────────────────────────────────────
+
+  knowledge: {
+    list: (agentId?: string) => {
+      const q = agentId ? `?agentId=${agentId}` : ''
+      return request<{ documents: KnowledgeDocumentItem[] }>(`/knowledge${q}`)
+    },
+    ingest: (data: IngestDocumentPayload) =>
+      request<KnowledgeDocumentItem>('/knowledge', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<void>(`/knowledge/${id}`, { method: 'DELETE' }),
+    parseYoutube: (url: string) =>
+      request<{ title: string; content: string; videoId: string }>(
+        '/knowledge/parse-youtube', { method: 'POST', body: JSON.stringify({ url }) },
+      ),
+    parseFile: async (file: File): Promise<{ title: string; content: string }> => {
+      const token = getAccessToken()
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch(`${BASE}/knowledge/parse-file`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Erro ao processar arquivo' }))
+        throw new ApiError(err.code ?? 'UNKNOWN', err.message ?? 'Erro ao processar arquivo', res.status)
+      }
+      return res.json()
+    },
+  },
+
   // ─── Departments ──────────────────────────────────────────────────────────
 
   departments: {
@@ -102,21 +141,89 @@ export const api = {
     delete: (id: string) =>
       request<void>(`/departments/${id}`, { method: 'DELETE' }),
   },
+
+  // ─── Crews ────────────────────────────────────────────────────────────────
+
+  crews: {
+    list: () => request<CrewItem[]>('/crews'),
+    get: (id: string) => request<{ crew: CrewItem, members: any[] }>(`/crews/${id}`),
+    create: (data: CreateCrewPayload) =>
+      request<CrewItem>('/crews', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: UpdateCrewPayload) =>
+      request<CrewItem>(`/crews/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request<void>(`/crews/${id}`, { method: 'DELETE' }),
+    getMetrics: (id: string) =>
+      request<CrewMetricsOutput>(`/crews/${id}/metrics`),
+  },
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export type AgentRoleItem = {
+  id: string
+  tenantId: string | null
+  name: string
+  category: string
+  description: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type AgentListItem = {
   id: string; tenantId: string; name: string; slug: string
   type: string; description: string | null; status: string
+  category: string; roleId: string; operationalFunction: string
   createdAt: string; updatedAt: string
 }
 
 export type AgentDetail = AgentListItem & {
   activePromptVersion: { id: string; systemPrompt: string; version: number; status: string } | null
+  // Extended fields
+  directorId: string | null
+  mainChannel: string | null
+  toneOfVoice: string | null
+  communicationStyle: string | null
+  autonomyLevel: string | null
+  responsibilities: string[]
+  permissionReadKB: boolean
+  permissionSendWhatsapp: boolean
+  permissionSendEmail: boolean
+  permissionExecuteTool: boolean
+  permissionCallHuman: boolean
+  permissionCreateTask: boolean
+  permissionReadHistory: boolean
+  permissionReadCommercial: boolean
+  outputFormat: string | null
+  expectedExamples: string | null
+  specificRules: string | null
 }
 
-export type CreateAgentPayload = { name: string; type: string; description?: string; systemPrompt: string }
+export type CreateAgentPayload = {
+  name: string
+  category: string
+  roleId: string
+  operationalFunction: string
+  description?: string
+  systemPrompt: string
+  directorId?: string | null
+  mainChannel?: string | null
+  toneOfVoice?: string | null
+  communicationStyle?: string | null
+  autonomyLevel?: string | null
+  responsibilities?: string[]
+  permissionReadKB?: boolean
+  permissionSendWhatsapp?: boolean
+  permissionSendEmail?: boolean
+  permissionExecuteTool?: boolean
+  permissionCallHuman?: boolean
+  permissionCreateTask?: boolean
+  permissionReadHistory?: boolean
+  permissionReadCommercial?: boolean
+  outputFormat?: string | null
+  expectedExamples?: string | null
+  specificRules?: string | null
+}
 
 export type ConversationsListOutput = {
   conversations: ConversationItem[]; total: number; page: number
@@ -155,3 +262,25 @@ export type DepartmentItem = {
 
 export type CreateDepartmentPayload = { name: string; description?: string }
 export type UpdateDepartmentPayload = { name?: string; description?: string; status?: 'ACTIVE' | 'INACTIVE' }
+
+export type KnowledgeDocumentItem = {
+  id: string; tenantId: string | null; agentId: string | null
+  layer: 'GLOBAL' | 'INDUSTRY' | 'TENANT' | 'AGENT'
+  title: string; content: string; status: 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED'
+  chunksCount: number; createdAt: string; updatedAt: string
+}
+export type IngestDocumentPayload = { title: string; content: string; layer: 'TENANT' | 'AGENT'; agentId?: string }
+
+export type CrewItem = {
+  id: string; tenantId: string; departmentId: string | null; name: string; slug: string
+  objective: string | null; description: string | null; status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
+  createdAt: string; updatedAt: string
+}
+
+export type CreateCrewPayload = { name: string; departmentId?: string; objective?: string; description?: string }
+export type UpdateCrewPayload = { name?: string; objective?: string; description?: string; status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED' }
+
+export type CrewMetricsOutput = {
+  totalConversations: number; activeConversations: number; totalMessages: number
+  messagesByAgent: { agentId: string; count: number }[]
+}

@@ -355,3 +355,32 @@ describe('Contrato: TenantContext resolvido pelo middleware', () => {
     expect(hasNoKeys(mockContext, ['userId', 'role'])).toBe(true)
   })
 })
+
+// ─── Agent Evolution: Roles & Professional properties ─────────────────────────
+
+describe('Contrato: POST /api/v1/agents/roles', () => {
+  it('CreateAgentRoleOutput deve conter id, tenantId, name, category, description, createdAt', () => {
+    const mockOutput = {
+      id: 'role-1',
+      tenantId: 'tenant-1',
+      name: 'Custom SDR',
+      category: 'Comercial',
+      description: 'SDR customizado',
+      createdAt: new Date().toISOString(),
+    }
+
+    expect(hasKeys(mockOutput, ['id', 'tenantId', 'name', 'category', 'description', 'createdAt'])).toBe(true)
+  })
+})
+
+describe('Contrato: GET /api/v1/agents/roles', () => {
+  it('ListAgentRolesOutput deve retornar uma lista de papéis contendo globais e customizados', () => {
+    const mockOutput = [
+      { id: 'role-global', tenantId: null, name: 'SDR', category: 'Comercial', description: 'Global SDR', createdAt: new Date().toISOString() },
+      { id: 'role-custom', tenantId: 'tenant-1', name: 'Custom Qualifier', category: 'Comercial', description: 'Custom', createdAt: new Date().toISOString() },
+    ]
+
+    expect(Array.isArray(mockOutput)).toBe(true)
+    expect(mockOutput.every((r) => hasKeys(r, ['id', 'tenantId', 'name', 'category', 'createdAt']))).toBe(true)
+  })
+})

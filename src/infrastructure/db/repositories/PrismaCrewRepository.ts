@@ -25,6 +25,11 @@ export class PrismaCrewRepository implements ICrewRepository {
     return r ? this.toEntity(r) : null
   }
 
+  async findBySlug(slug: string, tenantId: string): Promise<Crew | null> {
+    const r = await this.db.crew.findFirst({ where: { slug, tenantId } })
+    return r ? this.toEntity(r) : null
+  }
+
   async findAllByTenant(tenantId: string): Promise<Crew[]> {
     const records = await this.db.crew.findMany({ where: { tenantId }, orderBy: { name: 'asc' } })
     return records.map((r) => this.toEntity(r))

@@ -3,20 +3,40 @@ import { PublishAgentPrompt } from '@/domains/agent/use-cases/PublishAgentPrompt
 import type { IAgentRepository } from '@/domains/agent/repositories/IAgentRepository'
 import type { IAgentPromptVersionRepository } from '@/domains/agent/repositories/IAgentPromptVersionRepository'
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
-import { AgentStatus, AgentType } from '@/domains/agent/entities/Agent'
+import { AgentStatus, AgentType, type Agent } from '@/domains/agent/entities/Agent'
 import { PromptVersionStatus } from '@/domains/agent/entities/AgentPromptVersion'
 
-function makeAgent(overrides = {}) {
+function makeAgent(overrides = {}): Agent {
   return {
     id: 'agent-1',
     tenantId: 'tenant-1',
     name: 'SDR Devolus',
     slug: 'sdr-devolus',
     type: AgentType.SDR,
+    category: 'Vendas',
+    roleId: 'role-1',
+    operationalFunction: 'Qualificação de Leads',
     description: null,
     status: AgentStatus.DRAFT,
     createdAt: new Date(),
     updatedAt: new Date(),
+    directorId: null,
+    mainChannel: null,
+    toneOfVoice: null,
+    communicationStyle: null,
+    autonomyLevel: null,
+    responsibilities: [],
+    permissionReadKB: true,
+    permissionSendWhatsapp: false,
+    permissionSendEmail: false,
+    permissionExecuteTool: false,
+    permissionCallHuman: false,
+    permissionCreateTask: false,
+    permissionReadHistory: false,
+    permissionReadCommercial: false,
+    outputFormat: null,
+    expectedExamples: null,
+    specificRules: null,
     ...overrides,
   }
 }
@@ -42,10 +62,11 @@ function makeRepos() {
     countActive: vi.fn(),
     listByTenant: vi.fn(),
     create: vi.fn(),
-    updateStatus: vi.fn(),
+    updateStatus: vi.fn(), update: vi.fn(),
   }
   const promptRepo: IAgentPromptVersionRepository = {
     findActiveByAgent: vi.fn().mockResolvedValue(null),
+    findLatestByAgent: vi.fn(),
     getLatestVersion: vi.fn().mockResolvedValue(1),
     create: vi.fn().mockResolvedValue(makePromptVersion()),
     supersedePrevious: vi.fn(),

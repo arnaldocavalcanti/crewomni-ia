@@ -17,6 +17,7 @@ export class InMemoryConversationRepository implements IConversationRepository {
       id: randomUUID(),
       tenantId: data.tenantId,
       agentId: data.agentId,
+      crewId: data.crewId ?? null,
       externalUserId: data.externalUserId ?? null,
       status: ConversationStatus.OPEN,
       messageCount: 0,
@@ -35,6 +36,14 @@ export class InMemoryConversationRepository implements IConversationRepository {
     const conv = this.conversations.find((c) => c.id === id && c.tenantId === tenantId)
     if (conv) {
       conv.status = ConversationStatus.CLOSED
+      conv.updatedAt = new Date()
+    }
+  }
+
+  async updateConversationAgent(id: string, newAgentId: string, tenantId: string): Promise<void> {
+    const conv = this.conversations.find((c) => c.id === id && c.tenantId === tenantId)
+    if (conv) {
+      conv.agentId = newAgentId
       conv.updatedAt = new Date()
     }
   }
@@ -89,5 +98,40 @@ export class InMemoryConversationRepository implements IConversationRepository {
     return this.messages
       .filter((m) => m.conversationId === conversationId && m.tenantId === tenantId)
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+  }
+
+  async countConversationsByCrew(crewId: string, tenantId: string): Promise<{ total: number; active: number }> {
+    const crewConvs = this.conversations.filter(c => c.crewId === crewId && c.tenantId === tenantId)
+    return {
+      total: crewConvs.length,
+      active: crewConvs.filter(c => c.status === ConversationStatus.OPEN).length,
+    }
+  }
+
+  async countMessagesByCrewAndAgent(crewId: string, tenantId: string): Promise<{ agentId: string; count: number }[]> {
+    const crewConvIds = new Set(
+      this.conversations.filter(c => c.crewId === crewId && c.tenantId === tenantId).map(c => c.id)
+    )
+
+    const countsByAgent: Record<string, number> = {}
+
+    // Mensagens estão associadas à Conversation, mas precisamos agrupar pelo agentId da conversa? Não, precisamos agrupar pelas mensagens ou pelo agente responsável?
+    // O agentId que processou a mensagem é o responsável atual da conversa na hora que a mensagem foi criada, ou apenas agrupar conversas por agentId e somar as mensagens?
+    // A query no BD agrupará conversas por agentId e fará o SUM(messageCount) ou agrupará as mensagens?
+    // De acordo com o que modelamos, `Conversation.agentId` é quem detém a conversa. Mensagens pertencem à conversa.
+    // Vamos agrupar as conversas pelo seu current agentId ou cada mensagem? A spec diz: "número de mensagens por agente". Como o handoff muda o agentId, e a mensagem em si não tem agentId (apenas conversationId), 
+    // Wait: a mensagem tem agentId? Não, `Message` entity só tem `conversationId` e `tenantId`.
+    // Então, as mensagens pertencem à Conversation. Se uma conversa sofreu Handoff, as mensagens antigas eram de outro agente, as novas do novo agente. O `messageCount` fica na conversa inteira. Mas a tabela Message não tem `agentId` salvo nela. Como separar quais mensagens cada agente mandou?
+    // A não ser que possamos contar `Message` associada à `Conversation` e agrupar pelo *atual* `agentId` da conversa. (que seria uma aproximação aceitável para Fase 1.6: soma as mensagens das conversas que o agente atende atualmente).
+    // Ou seja: agrupar as `Conversation` por `agentId` e somar os `messageCount` de cada uma.
+    // Vamos implementar isso (somar `messageCount` agrupando `Conversation` por `agentId`).
+    
+    this.conversations
+      .filter(c => c.crewId === crewId && c.tenantId === tenantId)
+      .forEach(c => {
+        countsByAgent[c.agentId] = (countsByAgent[c.agentId] || 0) + c.messageCount
+      })
+
+    return Object.entries(countsByAgent).map(([agentId, count]) => ({ agentId, count }))
   }
 }

@@ -6,7 +6,7 @@ import type { ILLMProvider } from '@/shared/types/ILLMProvider'
 import type { IAgentRepository } from '@/domains/agent/repositories/IAgentRepository'
 import type { IAgentPromptVersionRepository } from '@/domains/agent/repositories/IAgentPromptVersionRepository'
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
-import { AgentStatus, AgentType } from '@/domains/agent/entities/Agent'
+import { AgentStatus, AgentType, type Agent } from '@/domains/agent/entities/Agent'
 import { KnowledgeLayer } from '@/domains/knowledge/entities/KnowledgeDocument'
 import { PromptVersionStatus } from '@/domains/agent/entities/AgentPromptVersion'
 
@@ -14,17 +14,37 @@ import { PromptVersionStatus } from '@/domains/agent/entities/AgentPromptVersion
 
 const MOCK_EMBEDDING = Array(1536).fill(0.1)
 
-function makeAgent(overrides = {}) {
+function makeAgent(overrides = {}): Agent {
   return {
     id: 'agent-1',
     tenantId: 'tenant-1',
     name: 'Agente Devolus',
     slug: 'agente-devolus',
     type: AgentType.HELPDESK,
+    category: 'Vendas',
+    roleId: 'role-1',
+    operationalFunction: 'Qualificação de Leads',
     description: null,
     status: AgentStatus.ACTIVE,
     createdAt: new Date(),
     updatedAt: new Date(),
+    directorId: null,
+    mainChannel: null,
+    toneOfVoice: null,
+    communicationStyle: null,
+    autonomyLevel: null,
+    responsibilities: [],
+    permissionReadKB: true,
+    permissionSendWhatsapp: false,
+    permissionSendEmail: false,
+    permissionExecuteTool: false,
+    permissionCallHuman: false,
+    permissionCreateTask: false,
+    permissionReadHistory: false,
+    permissionReadCommercial: false,
+    outputFormat: null,
+    expectedExamples: null,
+    specificRules: null,
     ...overrides,
   }
 }
@@ -63,10 +83,11 @@ function makeDeps() {
     countActive: vi.fn(),
     listByTenant: vi.fn(),
     create: vi.fn(),
-    updateStatus: vi.fn(),
+    updateStatus: vi.fn(), update: vi.fn(),
   }
   const promptRepo: IAgentPromptVersionRepository = {
     findActiveByAgent: vi.fn().mockResolvedValue(makePromptVersion()),
+    findLatestByAgent: vi.fn(),
     getLatestVersion: vi.fn(),
     create: vi.fn(),
     supersedePrevious: vi.fn(),

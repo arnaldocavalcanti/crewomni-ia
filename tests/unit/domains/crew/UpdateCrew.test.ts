@@ -18,6 +18,7 @@ function makeRepo(found: any = makeCrew()): ICrewRepository {
     create: vi.fn(), findAllByTenant: vi.fn(), findAllByDepartment: vi.fn(), delete: vi.fn(),
     findById:   vi.fn().mockResolvedValue(found),
     findByName: vi.fn().mockResolvedValue(null),
+    findBySlug: vi.fn().mockResolvedValue(null),
     update:     vi.fn().mockImplementation(async (_id, _t, data) => ({ ...found, ...data, updatedAt: new Date() })),
   }
 }

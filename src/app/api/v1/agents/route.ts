@@ -4,15 +4,36 @@ import { di } from '@/infrastructure/di'
 import { errorResponse } from '@/shared/utils/apiResponse'
 import { getSession } from '@/shared/guards/withSession'
 import { AgentType } from '@/domains/agent/entities/Agent'
+import { generateSlug } from '@/domains/organization/utils/generateSlug'
 
 const createSchema = z.object({
   name: z.string().min(3).max(100),
-  slug: z.string().min(1).max(50).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/, {
-    message: 'Slug deve conter apenas letras minúsculas, números e hífens',
-  }),
-  type: z.nativeEnum(AgentType),
-  description: z.string().max(500).optional(),
+  category: z.string().min(1),
+  roleId: z.string().uuid(),
+  operationalFunction: z.string().min(1),
+  type: z.nativeEnum(AgentType).optional(),
+  description: z.string().max(500).optional().nullable(),
   systemPrompt: z.string().min(10),
+
+  directorId: z.string().uuid().optional().nullable(),
+  mainChannel: z.string().max(100).optional().nullable(),
+  toneOfVoice: z.string().max(200).optional().nullable(),
+  communicationStyle: z.string().max(200).optional().nullable(),
+  autonomyLevel: z.string().max(50).optional().nullable(),
+  responsibilities: z.array(z.string()).optional(),
+
+  permissionReadKB: z.boolean().optional(),
+  permissionSendWhatsapp: z.boolean().optional(),
+  permissionSendEmail: z.boolean().optional(),
+  permissionExecuteTool: z.boolean().optional(),
+  permissionCallHuman: z.boolean().optional(),
+  permissionCreateTask: z.boolean().optional(),
+  permissionReadHistory: z.boolean().optional(),
+  permissionReadCommercial: z.boolean().optional(),
+
+  outputFormat: z.string().max(100).optional().nullable(),
+  expectedExamples: z.string().max(1000).optional().nullable(),
+  specificRules: z.string().max(1000).optional().nullable(),
 })
 
 export async function POST(request: NextRequest) {
@@ -31,7 +52,17 @@ export async function POST(request: NextRequest) {
     const result = await di.createAgent.execute({
       tenantId: session.tenantId!,
       requestedByRole: session.role,
+      slug: generateSlug(parsed.data.name),
       ...parsed.data,
+      description: parsed.data.description ?? undefined,
+      directorId: parsed.data.directorId ?? undefined,
+      mainChannel: parsed.data.mainChannel ?? undefined,
+      toneOfVoice: parsed.data.toneOfVoice ?? undefined,
+      communicationStyle: parsed.data.communicationStyle ?? undefined,
+      autonomyLevel: parsed.data.autonomyLevel ?? undefined,
+      outputFormat: parsed.data.outputFormat ?? undefined,
+      expectedExamples: parsed.data.expectedExamples ?? undefined,
+      specificRules: parsed.data.specificRules ?? undefined,
     })
 
     return Response.json(result, { status: 201 })

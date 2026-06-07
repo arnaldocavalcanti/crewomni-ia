@@ -34,6 +34,12 @@ export class InMemoryCrewRepository implements ICrewRepository {
     ) ?? null
   }
 
+  async findBySlug(slug: string, tenantId: string): Promise<Crew | null> {
+    return Array.from(store.values()).find(
+      (c) => c.slug === slug && c.tenantId === tenantId,
+    ) ?? null
+  }
+
   async findAllByTenant(tenantId: string): Promise<Crew[]> {
     return Array.from(store.values())
       .filter((c) => c.tenantId === tenantId)

@@ -40,7 +40,7 @@ function makeInput(overrides = {}) {
 
 function makeCrewRepo(found: any = makeCrew()): ICrewRepository {
   return {
-    create: vi.fn(), findByName: vi.fn(), findAllByTenant: vi.fn(),
+    create: vi.fn(), findByName: vi.fn(), findBySlug: vi.fn(), findAllByTenant: vi.fn(),
     findAllByDepartment: vi.fn(), update: vi.fn(), delete: vi.fn(),
     findById: vi.fn().mockResolvedValue(found),
   }
@@ -60,7 +60,7 @@ function makeMemberRepo(overrides: Partial<ICrewMemberRepository> = {}): ICrewMe
 function makeAgentRepo(found: any = makeAgent()): IAgentRepository {
   return {
     findBySlug: vi.fn(), findByName: vi.fn(), countActive: vi.fn(),
-    listByTenant: vi.fn(), create: vi.fn(), updateStatus: vi.fn(),
+    listByTenant: vi.fn(), create: vi.fn(), updateStatus: vi.fn(), update: vi.fn(),
     findById: vi.fn().mockResolvedValue(found),
   }
 }

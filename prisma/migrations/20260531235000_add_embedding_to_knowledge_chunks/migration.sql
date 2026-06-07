@@ -1,5 +1,6 @@
 -- Adiciona coluna de embedding vetorial aos chunks de conhecimento
 -- Requer extensão pgvector (já instalada via docker/init.sql)
+CREATE EXTENSION IF NOT EXISTS vector;
 ALTER TABLE knowledge_chunks ADD COLUMN IF NOT EXISTS embedding vector(1536);
 
 -- Índice HNSW para busca por similaridade coseno (performático para RAG)

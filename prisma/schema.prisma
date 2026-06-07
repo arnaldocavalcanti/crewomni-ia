@@ -56,11 +56,14 @@ model Tenant {
   users         User[]
   apiKeys       ApiKey[]
   agents             Agent[]
+  roles              AgentRole[]
   knowledgeDocuments KnowledgeDocument[]
   conversations      Conversation[]
   departments        Department[]
   crews        Crew[]
   crewMembers  CrewMember[]
+  usageLimit   TenantUsageLimit?
+  usageCurrent TenantUsageCurrent[]
 
   @@map("tenants")
 }
@@ -159,25 +162,75 @@ enum PromptVersionStatus {
 }
 
 model Agent {
-  id          String      @id @default(uuid())
-  tenantId    String
-  name        String
-  slug        String
-  type        AgentType
-  description String?
-  status      AgentStatus @default(DRAFT)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                  String      @id @default(uuid())
+  tenantId            String
+  name                String
+  slug                String
+  type                AgentType
+  category            String
+  roleId              String
+  operationalFunction String
+  description         String?
+  status              AgentStatus @default(DRAFT)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
-  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  promptVersions AgentPromptVersion[]
-  conversations  Conversation[]
+  // Contexto Organizacional & Responsável
+  directorId          String?
+  mainChannel         String?
+
+  // Comportamento & Autonomia
+  toneOfVoice        String?
+  communicationStyle String?
+  autonomyLevel      String?
+  responsibilities   Json        @default("[]")
+
+  // Permissões e Ferramentas
+  permissionReadKB         Boolean   @default(true)
+  permissionSendWhatsapp   Boolean   @default(false)
+  permissionSendEmail      Boolean   @default(false)
+  permissionExecuteTool    Boolean   @default(false)
+  permissionCallHuman      Boolean   @default(false)
+  permissionCreateTask     Boolean   @default(false)
+  permissionReadHistory    Boolean   @default(false)
+  permissionReadCommercial Boolean   @default(false)
+
+  // System Prompt Customizado (Complementos)
+  outputFormat       String?
+  expectedExamples   String?
+  specificRules      String?
+
+  // Relações
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  promptVersions  AgentPromptVersion[]
+  conversations   Conversation[]
   crewMemberships CrewMember[]
+  role            AgentRole            @relation(fields: [roleId], references: [id])
+  director        Agent?               @relation("AgentDirector", fields: [directorId], references: [id], onDelete: SetNull)
+  subordinates    Agent[]              @relation("AgentDirector")
 
   @@unique([tenantId, name])
   @@unique([tenantId, slug])
   @@index([tenantId])
+  @@index([roleId])
   @@map("agents")
+}
+
+model AgentRole {
+  id          String   @id @default(uuid())
+  tenantId    String?
+  name        String
+  category    String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agents Agent[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("agent_roles")
 }
 
 model AgentPromptVersion {
@@ -240,7 +293,7 @@ model KnowledgeChunk {
   tenantId   String?
   chunkIndex Int
   content    String
-  // embedding vector(1536) — adicionado via migration SQL manual
+  embedding  Unsupported("vector(1536)")?
   createdAt  DateTime @default(now())
 
   document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -266,6 +319,7 @@ model Conversation {
   id             String             @id @default(uuid())
   tenantId       String
   agentId        String
+  crewId         String?
   externalUserId String?
   status         ConversationStatus @default(OPEN)
   messageCount   Int                @default(0)
@@ -274,11 +328,13 @@ model Conversation {
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  crew     Crew?     @relation(fields: [crewId], references: [id], onDelete: Cascade)
   messages Message[]
 
   @@index([tenantId])
   @@index([tenantId, agentId])
   @@index([externalUserId])
+  @@index([crewId])
   @@map("conversations")
 }
 
@@ -353,6 +409,7 @@ model Crew {
   tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   members    CrewMember[]
+  conversations Conversation[]
 
   @@unique([tenantId, name])
   @@unique([tenantId, slug])
@@ -415,4 +472,44 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ─── Usage Limits ─────────────────────────────────────────────────────────────
+
+model TenantUsageLimit {
+  id                 String   @id @default(uuid())
+  tenantId           String   @unique
+  messagesPerMonth   Int      @default(1000)
+  tokensPerMonth     Int      @default(1000000)
+  costPerMonthUsd    Float    @default(10.0)
+  messagesPerMinute  Int      @default(30)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_usage_limits")
+}
+
+model TenantUsageCurrent {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  yearMonth          String
+  messages           Int       @default(0)
+  inputTokens        Int       @default(0)
+  outputTokens       Int       @default(0)
+  totalTokens        Int       @default(0)
+  estimatedCostUsd   Float     @default(0)
+  messagesLastMinute Int       @default(0)
+  lastMessageAt      DateTime?
+  needsNotification  Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, yearMonth])
+  @@index([tenantId])
+  @@map("tenant_usage_current")
 }

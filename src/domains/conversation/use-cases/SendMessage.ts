@@ -5,6 +5,8 @@ import type { BuildRAGContext } from '@/domains/knowledge/use-cases/BuildRAGCont
 import { ConversationStatus, MessageRole } from '../entities/Conversation'
 import type { IQualificationStateRepository } from '@/domains/qualification/repositories/IQualificationStateRepository'
 import type { ExtractAndUpdateState } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
+import type { ICrewMemberRepository } from '@/domains/crew/repositories/ICrewMemberRepository'
+import type { TransferConversation } from './TransferConversation'
 
 const MAX_MESSAGES = 200
 const HISTORY_LIMIT = 20
@@ -15,6 +17,7 @@ type SendMessageInput = {
   message: string
   conversationId?: string
   externalUserId?: string
+  crewId?: string
 }
 
 type SendMessageOutput = {
@@ -33,6 +36,9 @@ export class SendMessage {
     private auditLogger: IAuditLogger,
     private qualStateRepo: IQualificationStateRepository,
     private extractState: ExtractAndUpdateState,
+    private crewMemberRepo: ICrewMemberRepository,
+    private transferConversation: TransferConversation,
+    private checkUsageLimit?: { execute(input: { tenantId: string }): Promise<{ allowed: boolean; reason?: string }> },
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageOutput> {
@@ -59,12 +65,14 @@ export class SendMessage {
       conversation = await this.repo.createConversation({
         tenantId: input.tenantId,
         agentId: input.agentId,
+        crewId: input.crewId,
         externalUserId: input.externalUserId,
       })
       isNewConversation = true
     }
 
     const conversationId = conversation.id
+    const crewId = conversation.crewId
 
     // 3. Fetch recent history BEFORE persisting so the current message is not duplicated
     const recentMessages = await this.repo.listRecentMessages(conversationId, HISTORY_LIMIT)
@@ -87,13 +95,52 @@ export class SendMessage {
       qualState = await this.qualStateRepo.create({
         conversationId,
         tenantId: input.tenantId,
-        agentId: input.agentId,
+        agentId: conversation.agentId, // Ensure it's the current active agent
       })
     }
 
-    // 6. Run extraction and RAG in parallel.
-    // Extraction persists updated state for the NEXT message; RAG uses pre-extraction state.
-    // Promise.allSettled ensures one failure does not cancel the other.
+    // Prepare Crew Context & Tools
+    let crewMembers: { role: string; agentSlug: string; agentName: string; agentId: string }[] = []
+    let tools: any[] | undefined = undefined
+
+    if (crewId) {
+      const members = await this.crewMemberRepo.findAllByCrew(crewId, input.tenantId)
+      crewMembers = members.map((m) => ({
+        role: m.role,
+        agentSlug: m.agentId, // assuming agentId is used as slug/id
+        agentName: `Agente ${m.agentId}`,
+        agentId: m.agentId,
+      }))
+
+      if (crewMembers.length > 1) {
+        tools = [
+          {
+            type: 'function',
+            function: {
+              name: 'transfer_conversation',
+              description: 'Transfere a conversa atual para outro membro da equipe especializado em um assunto.',
+              parameters: {
+                type: 'object',
+                properties: {
+                  targetAgentSlug: { type: 'string', description: 'O identificador (slug) do agente alvo.' },
+                },
+                required: ['targetAgentSlug'],
+              },
+            },
+          },
+        ]
+      }
+    }
+
+    // 6. Check usage quota before calling LLM
+    if (this.checkUsageLimit) {
+      const usageResult = await this.checkUsageLimit.execute({ tenantId: input.tenantId })
+      if (!usageResult.allowed) {
+        throw new AppError('QUOTA_EXCEEDED', `Limite do tenant excedido: ${usageResult.reason}`)
+      }
+    }
+
+    // 7. Run extraction and RAG in parallel.
     let reply = ''
     let model = 'unknown'
     let tokensUsed = 0
@@ -104,10 +151,12 @@ export class SendMessage {
       this.extractState.execute({ state: qualState, message: input.message.trim() }),
       this.ragContext.execute({
         tenantId: input.tenantId,
-        agentId: input.agentId,
+        agentId: conversation.agentId,
         message: input.message.trim(),
         conversationHistory,
         qualificationState: qualState,
+        crewMembers,
+        tools,
       }),
     ])
 
@@ -120,6 +169,32 @@ export class SendMessage {
       model = ragResult.value.model
       tokensUsed = ragResult.value.tokensUsed
       chunksUsed = ragResult.value.chunksUsed
+
+      const toolCalls = ragResult.value.toolCalls
+      if (toolCalls && toolCalls.length > 0) {
+        for (const tc of toolCalls) {
+          if (tc.function?.name === 'transfer_conversation') {
+            try {
+              const args = JSON.parse(tc.function.arguments)
+              if (args.targetAgentSlug) {
+                const targetMember = crewMembers.find(m => m.agentSlug === args.targetAgentSlug)
+                if (targetMember) {
+                  await this.transferConversation.execute({
+                    tenantId: input.tenantId,
+                    conversationId,
+                    targetAgentId: targetMember.agentId,
+                  })
+                  if (!reply) {
+                    reply = `Um momento, estou transferindo você para o especialista adequado.`
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('Failed to parse or execute transfer tool call:', e)
+            }
+          }
+        }
+      }
     } else {
       failed = true
       reply = 'Desculpe, ocorreu um erro ao processar sua mensagem.'
@@ -144,7 +219,7 @@ export class SendMessage {
     await this.auditLogger.log({
       action: 'conversation.message.sent',
       tenantId: input.tenantId,
-      metadata: { agentId: input.agentId, conversationId, tokensUsed },
+      metadata: { agentId: conversation.agentId, conversationId, tokensUsed },
     })
 
     return {

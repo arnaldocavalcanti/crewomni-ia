@@ -4,10 +4,13 @@ import { LogoutUser } from '@/domains/auth/use-cases/LogoutUser'
 import { CreateTenant } from '@/domains/tenant/use-cases/CreateTenant'
 import { ResolveTenantContext } from '@/domains/tenant/use-cases/ResolveTenantContext'
 import { CreateAgent } from '@/domains/agent/use-cases/CreateAgent'
+import { CreateAgentRole } from '@/domains/agent/use-cases/CreateAgentRole'
+import { ListAgentRoles } from '@/domains/agent/use-cases/ListAgentRoles'
 import { PublishAgentPrompt } from '@/domains/agent/use-cases/PublishAgentPrompt'
 import { GetAgent } from '@/domains/agent/use-cases/GetAgent'
 import { ListAgents } from '@/domains/agent/use-cases/ListAgents'
 import { UpdateAgentStatus } from '@/domains/agent/use-cases/UpdateAgentStatus'
+import { UpdateAgent } from '@/domains/agent/use-cases/UpdateAgent'
 import { IngestDocument } from '@/domains/knowledge/use-cases/IngestDocument'
 import { SearchKnowledge } from '@/domains/knowledge/use-cases/SearchKnowledge'
 import { DeleteDocument } from '@/domains/knowledge/use-cases/DeleteDocument'
@@ -20,6 +23,7 @@ import { InMemoryRefreshTokenRepository } from '@/infrastructure/db/repositories
 import { InMemoryTenantRepository } from '@/infrastructure/db/repositories/InMemoryTenantRepository'
 import { InMemoryApiKeyRepository } from '@/infrastructure/db/repositories/InMemoryApiKeyRepository'
 import { InMemoryAgentRepository } from '@/infrastructure/db/repositories/InMemoryAgentRepository'
+import { InMemoryAgentRoleRepository } from '@/infrastructure/db/repositories/InMemoryAgentRoleRepository'
 import { InMemoryAgentPromptVersionRepository } from '@/infrastructure/db/repositories/InMemoryAgentPromptVersionRepository'
 import { InMemoryKnowledgeDocumentRepository } from '@/infrastructure/db/repositories/InMemoryKnowledgeDocumentRepository'
 import { InMemoryVectorRepository } from '@/infrastructure/vector/InMemoryVectorRepository'
@@ -28,6 +32,7 @@ import { PrismaRefreshTokenRepository } from '@/infrastructure/db/repositories/P
 import { PrismaTenantRepository } from '@/infrastructure/db/repositories/PrismaTenantRepository'
 import { PrismaApiKeyRepository } from '@/infrastructure/db/repositories/PrismaApiKeyRepository'
 import { PrismaAgentRepository } from '@/infrastructure/db/repositories/PrismaAgentRepository'
+import { PrismaAgentRoleRepository } from '@/infrastructure/db/repositories/PrismaAgentRoleRepository'
 import { PrismaAgentPromptVersionRepository } from '@/infrastructure/db/repositories/PrismaAgentPromptVersionRepository'
 import { PrismaKnowledgeDocumentRepository } from '@/infrastructure/db/repositories/PrismaKnowledgeDocumentRepository'
 import { OpenAIEmbeddingProvider } from '@/infrastructure/llm/openai/OpenAIEmbeddingProvider'
@@ -36,6 +41,7 @@ import { BuildRAGContext } from '@/domains/knowledge/use-cases/BuildRAGContext'
 import { SendMessage } from '@/domains/conversation/use-cases/SendMessage'
 import { ListConversations } from '@/domains/conversation/use-cases/ListConversations'
 import { GetConversationMessages } from '@/domains/conversation/use-cases/GetConversationMessages'
+import { TransferConversation } from '@/domains/conversation/use-cases/TransferConversation'
 import { GetAgentBySlug } from '@/domains/agent/use-cases/GetAgentBySlug'
 import { InMemoryConversationRepository } from '@/infrastructure/db/repositories/InMemoryConversationRepository'
 import { PrismaConversationRepository } from '@/infrastructure/db/repositories/PrismaConversationRepository'
@@ -54,6 +60,8 @@ import { DeleteCrew } from '@/domains/crew/use-cases/DeleteCrew'
 import { AddAgentToCrew } from '@/domains/crew/use-cases/AddAgentToCrew'
 import { RemoveAgentFromCrew } from '@/domains/crew/use-cases/RemoveAgentFromCrew'
 import { ListCrewMembers } from '@/domains/crew/use-cases/ListCrewMembers'
+import { GetCrewBySlug } from '@/domains/crew/use-cases/GetCrewBySlug'
+import { GetCrewMetrics } from '@/domains/crew/use-cases/GetCrewMetrics'
 import { InMemoryCrewRepository } from '@/infrastructure/db/repositories/InMemoryCrewRepository'
 import { InMemoryCrewMemberRepository } from '@/infrastructure/db/repositories/InMemoryCrewMemberRepository'
 import { PrismaCrewRepository } from '@/infrastructure/db/repositories/PrismaCrewRepository'
@@ -61,6 +69,12 @@ import { PrismaCrewMemberRepository } from '@/infrastructure/db/repositories/Pri
 import { InMemoryQualificationStateRepository } from '@/infrastructure/db/repositories/InMemoryQualificationStateRepository'
 import { PrismaQualificationStateRepository } from '@/infrastructure/db/repositories/PrismaQualificationStateRepository'
 import { ExtractAndUpdateState } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
+import { InMemoryTenantUsageLimitRepository } from '@/infrastructure/db/repositories/InMemoryTenantUsageLimitRepository'
+import { InMemoryTenantUsageCurrentRepository } from '@/infrastructure/db/repositories/InMemoryTenantUsageCurrentRepository'
+import { PrismaTenantUsageLimitRepository } from '@/infrastructure/db/repositories/PrismaTenantUsageLimitRepository'
+import { PrismaTenantUsageCurrentRepository } from '@/infrastructure/db/repositories/PrismaTenantUsageCurrentRepository'
+import { CheckAndEnforceUsageLimit } from '@/domains/usage-limits/use-cases/CheckAndEnforceUsageLimit'
+import { RecordUsage } from '@/domains/usage-limits/use-cases/RecordUsage'
 
 const usePrisma = !!process.env.DATABASE_URL
 const useOpenAI = !!process.env.OPENAI_API_KEY
@@ -71,6 +85,7 @@ const userRepo       = usePrisma ? new PrismaUserRepository()                   
 const tokenRepo      = usePrisma ? new PrismaRefreshTokenRepository()             : new InMemoryRefreshTokenRepository()
 const tenantRepo     = usePrisma ? new PrismaTenantRepository()                   : new InMemoryTenantRepository()
 const apiKeyRepo     = usePrisma ? new PrismaApiKeyRepository()                   : new InMemoryApiKeyRepository()
+const agentRoleRepo  = usePrisma ? new PrismaAgentRoleRepository()                 : new InMemoryAgentRoleRepository()
 const agentRepo      = usePrisma ? new PrismaAgentRepository()                    : new InMemoryAgentRepository()
 const promptRepo     = usePrisma ? new PrismaAgentPromptVersionRepository()       : new InMemoryAgentPromptVersionRepository()
 const knowledgeRepo  = usePrisma ? new PrismaKnowledgeDocumentRepository()        : new InMemoryKnowledgeDocumentRepository()
@@ -82,6 +97,9 @@ const crewMemberRepo = usePrisma ? new PrismaCrewMemberRepository()  : new InMem
 const qualStateRepo = usePrisma
   ? new PrismaQualificationStateRepository()
   : new InMemoryQualificationStateRepository()
+
+const usageLimitRepo   = usePrisma ? new PrismaTenantUsageLimitRepository()   : new InMemoryTenantUsageLimitRepository()
+const usageCurrentRepo = usePrisma ? new PrismaTenantUsageCurrentRepository() : new InMemoryTenantUsageCurrentRepository()
 
 // ─── Providers ────────────────────────────────────────────────────────────────
 
@@ -109,12 +127,15 @@ export const di = {
   createTenant:         new CreateTenant(tenantRepo, userRepo, auditLogger, passwordHasher),
   resolveTenantContext: new ResolveTenantContext(tenantRepo, apiKeyRepo, auditLogger),
   // Agent
-  createAgent:       new CreateAgent(agentRepo, promptRepo, auditLogger),
+  createAgent:       new CreateAgent(agentRepo, promptRepo, agentRoleRepo, auditLogger),
+  createAgentRole:   new CreateAgentRole(agentRoleRepo, auditLogger),
+  listAgentRoles:    new ListAgentRoles(agentRoleRepo),
   publishAgentPrompt: new PublishAgentPrompt(agentRepo, promptRepo, auditLogger),
   getAgent:          new GetAgent(agentRepo, promptRepo),
   getAgentBySlug:    new GetAgentBySlug(agentRepo, promptRepo),
   listAgents:        new ListAgents(agentRepo, promptRepo),
   updateAgentStatus: new UpdateAgentStatus(agentRepo, auditLogger),
+  updateAgent:       new UpdateAgent(agentRepo, auditLogger),
   // Knowledge
   ingestDocument:    new IngestDocument(knowledgeRepo, vectorRepo, embeddingProvider, auditLogger),
   searchKnowledge:   new SearchKnowledge(vectorRepo, embeddingProvider),
@@ -131,16 +152,33 @@ export const di = {
   createCrew:          new CreateCrew(crewRepo, departmentRepo, auditLogger),
   listCrews:           new ListCrews(crewRepo),
   getCrew:             new GetCrew(crewRepo, crewMemberRepo),
+  getCrewBySlug:       new GetCrewBySlug(crewRepo, crewMemberRepo),
   updateCrew:          new UpdateCrew(crewRepo, auditLogger),
   deleteCrew:          new DeleteCrew(crewRepo, crewMemberRepo, auditLogger),
   addAgentToCrew:      new AddAgentToCrew(crewRepo, crewMemberRepo, agentRepo, auditLogger),
   removeAgentFromCrew: new RemoveAgentFromCrew(crewMemberRepo, auditLogger),
   listCrewMembers:     new ListCrewMembers(crewRepo, crewMemberRepo),
+  getCrewMetrics:      new GetCrewMetrics(crewRepo, conversationRepo, auditLogger),
   // Conversation
   listConversations:       new ListConversations(conversationRepo),
   getConversationMessages: new GetConversationMessages(conversationRepo),
+  transferConversation:    new TransferConversation(conversationRepo, crewMemberRepo, auditLogger),
   sendMessage:             null as unknown as SendMessage,
+  // Usage Limits
+  checkUsageLimit: new CheckAndEnforceUsageLimit(usageLimitRepo, usageCurrentRepo),
+  recordUsage:     new RecordUsage(usageCurrentRepo, usageLimitRepo),
+  usageLimitRepo,
+  usageCurrentRepo,
 }
 
 // SendMessage depende de di.buildRAGContext — resolvido após criação do objeto
-di.sendMessage = new SendMessage(conversationRepo, di.buildRAGContext, auditLogger, qualStateRepo, extractState)
+di.sendMessage = new SendMessage(
+  conversationRepo,
+  di.buildRAGContext,
+  auditLogger,
+  qualStateRepo,
+  extractState,
+  crewMemberRepo,
+  di.transferConversation,
+  di.checkUsageLimit,
+)

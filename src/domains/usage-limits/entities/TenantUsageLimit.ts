@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto'
+
 export type TenantUsageLimit = {
   id: string
   tenantId: string
@@ -22,7 +24,7 @@ export function createTenantUsageLimit(
   overrides?: Partial<Omit<TenantUsageLimit, 'id' | 'tenantId' | 'createdAt' | 'updatedAt'>>
 ): TenantUsageLimit {
   return {
-    id: crypto.randomUUID(),
+    id: randomUUID(),
     tenantId,
     ...DEFAULT_USAGE_LIMIT,
     isActive: true,

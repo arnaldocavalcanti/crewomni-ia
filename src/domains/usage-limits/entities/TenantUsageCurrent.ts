@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto'
+
 export type TenantUsageCurrent = {
   id: string
   tenantId: string
@@ -23,7 +25,7 @@ export function getCurrentYearMonth(): string {
 
 export function createTenantUsageCurrent(tenantId: string, yearMonth?: string): TenantUsageCurrent {
   return {
-    id: crypto.randomUUID(),
+    id: randomUUID(),
     tenantId,
     yearMonth: yearMonth ?? getCurrentYearMonth(),
     messages: 0,

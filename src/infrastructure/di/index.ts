@@ -162,7 +162,8 @@ const analyticsRepo    = usePrisma ? new PrismaAnalyticsRepository() : new InMem
 
 import { InMemoryCrewWorkflowRepository } from '@/infrastructure/db/repositories/InMemoryCrewWorkflowRepository'
 import { PrismaCrewWorkflowRepository } from '@/infrastructure/db/repositories/PrismaCrewWorkflowRepository'
-const crewWorkflowRepo = usePrisma ? new PrismaCrewWorkflowRepository(new PrismaClient()) : new InMemoryCrewWorkflowRepository()
+import { getPrismaClient } from '@/infrastructure/db/prisma/client'
+const crewWorkflowRepo = usePrisma ? new PrismaCrewWorkflowRepository(getPrismaClient()) : new InMemoryCrewWorkflowRepository()
 
 import { LangGraphWorkflowExecutor } from '@/infrastructure/langgraph/LangGraphWorkflowExecutor'
 const workflowExecutor = new LangGraphWorkflowExecutor()

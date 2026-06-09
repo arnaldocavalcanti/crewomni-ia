@@ -84,6 +84,13 @@ async function main() {
     console.log(`  Senha: ${DEMO_USER_PASSWORD}`)
   } else {
     console.log(`✓ TENANT_ADMIN demo já existe: ${DEMO_USER_EMAIL}`)
+    if (existingDemoUser.tenantId !== tenant.id) {
+      await prisma.user.update({
+        where: { id: existingDemoUser.id },
+        data: { tenantId: tenant.id },
+      })
+      console.log(`✓ TENANT_ADMIN demo atualizado com o tenantId correto: ${tenant.id}`)
+    }
   }
 
   console.log('\n─── Para usar o dashboard ───────────────────────────────')

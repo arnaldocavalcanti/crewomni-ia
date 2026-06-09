@@ -1,33 +1,40 @@
-import { redirect } from 'next/navigation'
-import { getServerSession } from '@/shared/guards/withSession'
-import { di } from '@/infrastructure/di'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { api } from '@/lib/api'
 import { ChannelsClient } from './ChannelsClient'
 
-export const metadata = {
-  title: 'Canais | CrewOmni',
-}
+export default function ChannelsPage() {
+  const [channels, setChannels] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-export default async function ChannelsPage() {
-  const session = await getServerSession()
-  if (!session || !session.tenantId) {
-    redirect('/login')
-  }
-
-  const channels = await di.listChannelConfigs.execute({ tenantId: session.tenantId })
+  useEffect(() => {
+    api.channels.list()
+      .then(setChannels)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
 
   return (
     <div className="flex h-full w-full flex-col">
-      <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
+      <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6 flex-shrink-0">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Canais de Atendimento</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mt-0.5">
             Integre o WhatsApp e E-mail para que seus agentes omnicanal possam responder clientes automaticamente.
           </p>
         </div>
       </header>
       
       <main className="flex-1 overflow-y-auto p-6">
-        <ChannelsClient initialChannels={channels} />
+        {loading ? (
+          <div className="mx-auto max-w-4xl space-y-4">
+            <div className="h-32 rounded-xl border border-border bg-secondary/30 animate-pulse" />
+            <div className="h-32 rounded-xl border border-border bg-secondary/30 animate-pulse" />
+          </div>
+        ) : (
+          <ChannelsClient initialChannels={channels} />
+        )}
       </main>
     </div>
   )

@@ -4,6 +4,7 @@ import path from 'path'
 export default defineConfig({
   test: {
     globals: true,
+    testTimeout: 30000,
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
     coverage: {

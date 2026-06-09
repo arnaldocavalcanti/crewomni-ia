@@ -1,6 +1,6 @@
 export type DispatchParams = {
   tenantId: string
-  conversationId: string
+  conversationId?: string
   to: string              // número E.164 ou endereço de e-mail
   text: string
   metadata?: Record<string, unknown>

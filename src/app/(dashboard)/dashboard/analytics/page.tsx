@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { OverviewCards } from '@/components/analytics/OverviewCards'
 import { AgentPerformanceTable } from '@/components/analytics/AgentPerformanceTable'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { api } from '@/lib/api'
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('7d')
@@ -16,11 +17,8 @@ export default function AnalyticsPage() {
     async function fetchOverview() {
       setLoadingOverview(true)
       try {
-        const res = await fetch(`/api/v1/analytics/overview?timeRange=${timeRange}`)
-        if (res.ok) {
-          const data = await res.json()
-          setOverview(data)
-        }
+        const data = await api.analytics.getOverview(timeRange)
+        setOverview(data)
       } catch (e) {
         console.error('Error fetching overview', e)
       } finally {
@@ -31,11 +29,8 @@ export default function AnalyticsPage() {
     async function fetchAgents() {
       setLoadingAgents(true)
       try {
-        const res = await fetch(`/api/v1/analytics/agents?timeRange=${timeRange}`)
-        if (res.ok) {
-          const data = await res.json()
-          setAgents(data)
-        }
+        const data = await api.analytics.getAgents(timeRange)
+        setAgents(data)
       } catch (e) {
         console.error('Error fetching agents', e)
       } finally {

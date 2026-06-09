@@ -173,6 +173,31 @@ export const api = {
       request<void>(`/crews/${id}`, { method: 'DELETE' }),
     getMetrics: (id: string) =>
       request<CrewMetricsOutput>(`/crews/${id}/metrics`),
+    addMember: (crewId: string, data: { agentId: string; role: 'DIRECTOR' | 'MEMBER' | 'OBSERVER'; order: number; isRequired?: boolean }) =>
+      request<any>(`/crews/${crewId}/members`, { method: 'POST', body: JSON.stringify(data) }),
+  },
+
+  // ─── Channels ──────────────────────────────────────────────────────────────
+
+  channels: {
+    list: () => request<any[]>('/channels'),
+    create: (data: {
+      provider: 'WHATSAPP' | 'EMAIL'
+      phoneNumberId?: string | null
+      accessToken?: string | null
+      webhookSecret?: string | null
+      fromAddress?: string | null
+      fromName?: string | null
+      sendgridApiKey?: string | null
+    }) => request<any>('/channels', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/channels/${id}`, { method: 'DELETE' }),
+  },
+
+  // ─── Analytics ─────────────────────────────────────────────────────────────
+
+  analytics: {
+    getOverview: (timeRange: string) => request<any>(`/analytics/overview?timeRange=${timeRange}`),
+    getAgents: (timeRange: string) => request<any>(`/analytics/agents?timeRange=${timeRange}`),
   },
 }
 

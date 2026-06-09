@@ -10,7 +10,7 @@ export const metadata = {
 export default async function ChannelsPage() {
   const session = await getServerSession()
   if (!session || !session.tenantId) {
-    redirect('/auth/login')
+    redirect('/login')
   }
 
   const channels = await di.listChannelConfigs.execute({ tenantId: session.tenantId })

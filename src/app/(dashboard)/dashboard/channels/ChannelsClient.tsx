@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, Trash2, Mail, MessageCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { api } from '@/lib/api'
 
 type ChannelProvider = 'WHATSAPP' | 'EMAIL'
 
@@ -35,8 +36,7 @@ export function ChannelsClient({ initialChannels }: { initialChannels: Channel[]
     if (!confirm('Deseja realmente remover este canal?')) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/v1/channels/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Falha ao remover canal')
+      await api.channels.delete(id)
       setChannels(channels.filter(c => c.id !== id))
     } catch (err: any) {
       alert(err.message)
@@ -50,18 +50,12 @@ export function ChannelsClient({ initialChannels }: { initialChannels: Channel[]
     setError('')
     setLoading(true)
     try {
-      const res = await fetch('/api/v1/channels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: 'WHATSAPP',
-          phoneNumberId,
-          accessToken,
-          webhookSecret
-        })
+      const data = await api.channels.create({
+        provider: 'WHATSAPP',
+        phoneNumberId,
+        accessToken,
+        webhookSecret
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Erro ao salvar')
       
       setChannels([...channels, data])
       setIsAdding(null)
@@ -78,18 +72,12 @@ export function ChannelsClient({ initialChannels }: { initialChannels: Channel[]
     setError('')
     setLoading(true)
     try {
-      const res = await fetch('/api/v1/channels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: 'EMAIL',
-          fromAddress,
-          fromName,
-          sendgridApiKey
-        })
+      const data = await api.channels.create({
+        provider: 'EMAIL',
+        fromAddress,
+        fromName,
+        sendgridApiKey
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message || 'Erro ao salvar')
       
       setChannels([...channels, data])
       setIsAdding(null)

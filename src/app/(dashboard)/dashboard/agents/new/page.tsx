@@ -238,10 +238,10 @@ export default function NewAgentPage() {
       // If crewId is specified, add agent to that crew in background
       if (form.crewId) {
         try {
-          await fetch(`/api/v1/crews/${form.crewId}/members`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ agentId: created.id, role: 'MEMBER' })
+          await api.crews.addMember(form.crewId, {
+            agentId: created.id,
+            role: 'MEMBER',
+            order: 0,
           })
         } catch (crewErr) {
           console.error('Erro ao vincular agente à crew:', crewErr)

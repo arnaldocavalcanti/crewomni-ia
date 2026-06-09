@@ -13,7 +13,7 @@ export type Session = {
 const jwtSecret = () =>
   new TextEncoder().encode(process.env.JWT_SECRET ?? 'dev-secret-change-in-production')
 
-export async function getSession(request: NextRequest): Promise<Session> {
+export async function getSession(request: NextRequest, requireTenant = true): Promise<Session> {
   const authHeader = request.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
     throw new AppError('UNAUTHORIZED', 'Token não fornecido')
@@ -25,16 +25,22 @@ export async function getSession(request: NextRequest): Promise<Session> {
     throw new AppError('TOKEN_EXPIRED', 'Token inválido ou expirado')
   })
 
-  return {
+  const session = {
     userId: payload.userId as string,
     tenantId: (payload.tenantId as string | null) ?? null,
     role: payload.role as UserRole,
     isPlatformAdmin: payload.role === 'PLATFORM_ADMIN',
   }
+
+  if (requireTenant && !session.tenantId) {
+    throw new AppError('FORBIDDEN', 'Acesso restrito a usuários com tenant associado')
+  }
+
+  return session
 }
 
 export async function requirePlatformAdmin(request: NextRequest): Promise<Session> {
-  const session = await getSession(request)
+  const session = await getSession(request, false)
   if (!session.isPlatformAdmin) {
     throw new AppError('FORBIDDEN', 'Acesso restrito a administradores da plataforma')
   }

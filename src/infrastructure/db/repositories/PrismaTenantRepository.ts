@@ -37,6 +37,11 @@ export class PrismaTenantRepository implements ITenantRepository {
     await this.db.tenant.update({ where: { id }, data: { status } })
   }
 
+  async isKdlOptedOut(tenantId: string): Promise<boolean> {
+    const settings = await this.db.tenantSettings.findUnique({ where: { tenantId } })
+    return settings?.kdlOptOut ?? false
+  }
+
   private toEntity(record: any): Tenant {
     return {
       id: record.id,

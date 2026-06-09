@@ -62,6 +62,7 @@ model Tenant {
   departments        Department[]
   crews        Crew[]
   crewMembers  CrewMember[]
+  crewWorkflows CrewWorkflow[]
   usageLimit   TenantUsageLimit?
   usageCurrent TenantUsageCurrent[]
 
@@ -75,6 +76,7 @@ model TenantSettings {
   dpoEmail         String?
   privacyPolicyUrl String?
   dataRetentionDays Int    @default(90)
+  kdlOptOut        Boolean @default(false)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -308,11 +310,19 @@ model KnowledgeChunk {
 enum ConversationStatus {
   OPEN
   CLOSED
+  ACTIVE
+  WAITING_USER
+  WAITING_AGENT
+  HANDOFF_REQUESTED
+  HANDOFF_ACCEPTED
+  REOPENED
+  ARCHIVED
 }
 
 enum MessageRole {
   USER
   ASSISTANT
+  OPERATOR
 }
 
 model Conversation {
@@ -323,6 +333,7 @@ model Conversation {
   externalUserId String?
   status         ConversationStatus @default(OPEN)
   messageCount   Int                @default(0)
+  workflowState  Json?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -330,6 +341,7 @@ model Conversation {
   agent    Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
   crew     Crew?     @relation(fields: [crewId], references: [id], onDelete: Cascade)
   messages Message[]
+  lifecycleEvents ConversationLifecycleEvent[]
 
   @@index([tenantId])
   @@index([tenantId, agentId])
@@ -410,6 +422,7 @@ model Crew {
   department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   members    CrewMember[]
   conversations Conversation[]
+  workflow   CrewWorkflow?
 
   @@unique([tenantId, name])
   @@unique([tenantId, slug])
@@ -436,6 +449,22 @@ model CrewMember {
   @@index([tenantId])
   @@index([crewId])
   @@map("crew_members")
+}
+
+model CrewWorkflow {
+  id        String   @id @default(uuid())
+  tenantId  String
+  crewId    String   @unique
+  nodes     Json     @default("[]")
+  edges     Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  crew   Crew   @relation(fields: [crewId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("crew_workflows")
 }
 
 // ─── Qualification ────────────────────────────────────────────────────────────
@@ -512,4 +541,186 @@ model TenantUsageCurrent {
   @@unique([tenantId, yearMonth])
   @@index([tenantId])
   @@map("tenant_usage_current")
+}
+
+model InboundEvent {
+  id                      String   @id @default(uuid())
+  tenantId                String
+  channel                 String
+  provider                String
+  providerMessageId       String
+  providerConversationId  String?
+  contactExternalId       String
+  rawPayload              Json
+  normalizedPayload       Json?
+  status                  String   @default("RECEIVED")
+  attemptCount            Int      @default(0)
+  receivedAt              DateTime
+  processedAt             DateTime?
+  error                   String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@unique([tenantId, provider, providerMessageId])
+  @@index([tenantId, status])
+  @@map("inbound_events")
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String?
+  email     String?
+  phone     String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  identities ContactChannelIdentity[]
+
+  @@index([tenantId])
+  @@map("contacts")
+}
+
+model ContactChannelIdentity {
+  id           String   @id @default(uuid())
+  tenantId     String
+  contactId    String
+  channel      String
+  provider     String
+  externalId   String
+  phoneNumber  String?
+  emailAddress String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, channel, provider, externalId])
+  @@index([tenantId])
+  @@index([contactId])
+  @@map("contact_channel_identities")
+}
+
+model ConversationLifecycleEvent {
+  id             String   @id @default(uuid())
+  tenantId       String
+  conversationId String
+  fromStatus     String
+  toStatus       String
+  actor          String
+  actorId        String?
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([conversationId])
+  @@map("conversation_lifecycle_events")
+}
+
+model AgentExecutionTrace {
+  id               String   @id @default(uuid())
+  tenantId         String
+  conversationId   String
+  inboundEventId   String?
+  agentId          String
+  crewId           String?
+  channel          String
+  promptVersionId  String?
+  model            String?
+  inputTokens      Int      @default(0)
+  outputTokens     Int      @default(0)
+  totalTokens      Int      @default(0)
+  estimatedCostUsd Float    @default(0)
+  chunksUsed       String[]
+  memoryBlocksUsed String[]
+  queueWaitMs      Int?
+  llmDurationMs    Int?
+  durationMs       Int      @default(0)
+  status           String
+  error            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([conversationId])
+  @@map("agent_execution_traces")
+}
+
+model ConversationSummary {
+  id                      String   @id @default(uuid())
+  tenantId                String
+  conversationId          String   @unique
+  summary                 String
+  lastSummarizedMessageId String
+  summaryVersion          Int      @default(1)
+  tokenCount              Int      @default(0)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("conversation_summaries")
+}
+
+model ContactMemory {
+  id                   String   @id @default(uuid())
+  tenantId             String
+  contactId            String
+  memoryType           String
+  content              String
+  sourceConversationId String
+  confidence           Float    @default(1.0)
+  status               String
+  shouldPersist        Boolean  @default(true)
+  expiresAt            DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([contactId])
+  @@map("contact_memories")
+}
+
+enum KDLInsightStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model KDLInsight {
+  id              String           @id @default(uuid())
+  niche           Niche
+  questionPattern String
+  answerPattern   String
+  sourceCount     Int              @default(1)
+  confidence      Float
+  status          KDLInsightStatus @default(PENDING_REVIEW)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  createdAt       DateTime         @default(now())
+
+  @@map("kdl_insights")
+}
+
+// ─── Channels ──────────────────────────────────────────────────────────────────
+
+model ChannelConfig {
+  id              String   @id @default(uuid())
+  tenantId        String
+  provider        String   // 'WHATSAPP' | 'EMAIL'
+  phoneNumberId   String?  // WhatsApp: Business phone number ID
+  accessToken     String?  // Criptografado
+  webhookSecret   String?  // Criptografado
+  fromAddress     String?  // Email: endereço de envio
+  fromName        String?
+  sendgridApiKey  String?  // Criptografado
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([provider, phoneNumberId])
+  @@unique([provider, fromAddress])
+  @@index([tenantId])
+  @@map("channel_configs")
 }

@@ -36,12 +36,14 @@ function makeApiKey(overrides = {}) {
 }
 
 function makeRepos() {
-  const tenantRepo: ITenantRepository = {
+  const tenantRepo = {
     findById: vi.fn(),
     findBySlug: vi.fn(),
     create: vi.fn(),
     updateStatus: vi.fn(),
-  }
+    update: vi.fn(),
+    isKdlOptedOut: vi.fn(),
+  } as unknown as ITenantRepository
   const apiKeyRepo: IApiKeyRepository = {
     findByPrefix: vi.fn(),
     create: vi.fn(),

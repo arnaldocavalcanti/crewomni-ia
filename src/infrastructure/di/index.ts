@@ -1,3 +1,4 @@
+import { PrismaClient } from '@prisma/client'
 import { AuthenticateUser } from '@/domains/auth/use-cases/AuthenticateUser'
 import { RefreshSession } from '@/domains/auth/use-cases/RefreshSession'
 import { LogoutUser } from '@/domains/auth/use-cases/LogoutUser'
@@ -42,6 +43,8 @@ import { SendMessage } from '@/domains/conversation/use-cases/SendMessage'
 import { ListConversations } from '@/domains/conversation/use-cases/ListConversations'
 import { GetConversationMessages } from '@/domains/conversation/use-cases/GetConversationMessages'
 import { TransferConversation } from '@/domains/conversation/use-cases/TransferConversation'
+import { GetConversationDetails } from '@/domains/conversation/use-cases/GetConversationDetails'
+import { OperatorReply } from '@/domains/conversation/use-cases/OperatorReply'
 import { GetAgentBySlug } from '@/domains/agent/use-cases/GetAgentBySlug'
 import { InMemoryConversationRepository } from '@/infrastructure/db/repositories/InMemoryConversationRepository'
 import { PrismaConversationRepository } from '@/infrastructure/db/repositories/PrismaConversationRepository'
@@ -75,6 +78,59 @@ import { PrismaTenantUsageLimitRepository } from '@/infrastructure/db/repositori
 import { PrismaTenantUsageCurrentRepository } from '@/infrastructure/db/repositories/PrismaTenantUsageCurrentRepository'
 import { CheckAndEnforceUsageLimit } from '@/domains/usage-limits/use-cases/CheckAndEnforceUsageLimit'
 import { RecordUsage } from '@/domains/usage-limits/use-cases/RecordUsage'
+import { UpdateTenantUsageLimit } from '@/domains/usage-limits/use-cases/UpdateTenantUsageLimit'
+
+// Distillation - Fase 2.4
+import { RunKDL } from '@/domains/distillation/use-cases/RunKDL'
+import { ReviewKDLInsight } from '@/domains/distillation/use-cases/ReviewKDLInsight'
+import { InMemoryKDLInsightRepository } from '@/infrastructure/db/repositories/InMemoryKDLInsightRepository'
+import { PrismaKDLInsightRepository } from '@/infrastructure/db/repositories/PrismaKDLInsightRepository'
+
+// Channels - Fase 3.2
+import { InMemoryChannelConfigRepository } from '@/infrastructure/db/repositories/InMemoryChannelConfigRepository'
+import { PrismaChannelConfigRepository } from '@/infrastructure/db/repositories/PrismaChannelConfigRepository'
+import { CreateChannelConfig } from '@/domains/channel/use-cases/CreateChannelConfig'
+import { ListChannelConfigs } from '@/domains/channel/use-cases/ListChannelConfigs'
+import { DeleteChannelConfig } from '@/domains/channel/use-cases/DeleteChannelConfig'
+import { ChannelDispatcherFactory } from '@/infrastructure/channel/ChannelDispatcherFactory'
+import { WhatsAppDispatcher } from '@/infrastructure/channel/WhatsAppDispatcher'
+import { EmailDispatcher } from '@/infrastructure/channel/EmailDispatcher'
+import { WhatsAppWebhookAdapter } from '@/infrastructure/channel/WhatsAppWebhookAdapter'
+import { EmailWebhookAdapter } from '@/infrastructure/channel/EmailWebhookAdapter'
+// Analytics - Fase 3.4
+import { InMemoryAnalyticsRepository } from '@/infrastructure/db/repositories/InMemoryAnalyticsRepository'
+import { PrismaAnalyticsRepository } from '@/infrastructure/db/repositories/PrismaAnalyticsRepository'
+import { GetOverviewMetrics } from '@/domains/analytics/use-cases/GetOverviewMetrics'
+import { GetAgentMetrics } from '@/domains/analytics/use-cases/GetAgentMetrics'
+
+// Harness - Fase 2.2
+import { InMemoryInboundEventRepository } from '@/infrastructure/db/repositories/InMemoryInboundEventRepository'
+import { InMemoryQueueProvider } from '@/infrastructure/queues/InMemoryQueueProvider'
+import { ReceiveInboundEvent } from '@/domains/channel/use-cases/ReceiveInboundEvent'
+import { InMemoryTraceRepository } from '@/infrastructure/db/repositories/InMemoryTraceRepository'
+import { RecordExecutionTrace } from '@/domains/observability/use-cases/RecordExecutionTrace'
+import { InMemoryUsageLimiter } from '@/infrastructure/rate-limit/InMemoryUsageLimiter'
+import { ResolveOrCreateContact } from '@/domains/contact/use-cases/ResolveOrCreateContact'
+import { InMemoryContactRepository } from '@/infrastructure/db/repositories/InMemoryContactRepository'
+import { InMemoryContactChannelIdentityRepository } from '@/infrastructure/db/repositories/InMemoryContactChannelIdentityRepository'
+import { InMemoryConversationSummaryRepository } from '@/infrastructure/db/repositories/InMemoryConversationSummaryRepository'
+import { InMemoryContactMemoryRepository } from '@/infrastructure/db/repositories/InMemoryContactMemoryRepository'
+import { InMemoryConversationLifecycleRepository } from '@/infrastructure/db/repositories/InMemoryConversationLifecycleRepository'
+import { ApplyMemoryPolicy } from '@/domains/memory-policy/use-cases/ApplyMemoryPolicy'
+import { SummarizeConversation } from '@/domains/memory-policy/use-cases/SummarizeConversation'
+import { OrchestrateInboundMessage } from '@/domains/orchestration/use-cases/OrchestrateInboundMessage'
+import { ApplyLifecycleTransition } from '@/domains/conversation-lifecycle/use-cases/ApplyLifecycleTransition'
+import { RequestHumanHandoff } from '@/domains/conversation-lifecycle/use-cases/RequestHumanHandoff'
+import { AcceptHumanHandoff } from '@/domains/conversation-lifecycle/use-cases/AcceptHumanHandoff'
+
+// Prisma Harness Repos
+import { PrismaInboundEventRepository } from '@/infrastructure/db/repositories/PrismaInboundEventRepository'
+import { PrismaContactRepository } from '@/infrastructure/db/repositories/PrismaContactRepository'
+import { PrismaContactChannelIdentityRepository } from '@/infrastructure/db/repositories/PrismaContactChannelIdentityRepository'
+import { PrismaConversationLifecycleRepository } from '@/infrastructure/db/repositories/PrismaConversationLifecycleRepository'
+import { PrismaTraceRepository } from '@/infrastructure/db/repositories/PrismaTraceRepository'
+import { PrismaConversationSummaryRepository } from '@/infrastructure/db/repositories/PrismaConversationSummaryRepository'
+import { PrismaContactMemoryRepository } from '@/infrastructure/db/repositories/PrismaContactMemoryRepository'
 
 const usePrisma = !!process.env.DATABASE_URL
 const useOpenAI = !!process.env.OPENAI_API_KEY
@@ -98,8 +154,30 @@ const qualStateRepo = usePrisma
   ? new PrismaQualificationStateRepository()
   : new InMemoryQualificationStateRepository()
 
+const kdlInsightRepo   = usePrisma ? new PrismaKDLInsightRepository()         : new InMemoryKDLInsightRepository()
 const usageLimitRepo   = usePrisma ? new PrismaTenantUsageLimitRepository()   : new InMemoryTenantUsageLimitRepository()
 const usageCurrentRepo = usePrisma ? new PrismaTenantUsageCurrentRepository() : new InMemoryTenantUsageCurrentRepository()
+const channelConfigRepo = usePrisma ? new PrismaChannelConfigRepository() : new InMemoryChannelConfigRepository()
+const analyticsRepo    = usePrisma ? new PrismaAnalyticsRepository() : new InMemoryAnalyticsRepository()
+
+import { InMemoryCrewWorkflowRepository } from '@/infrastructure/db/repositories/InMemoryCrewWorkflowRepository'
+import { PrismaCrewWorkflowRepository } from '@/infrastructure/db/repositories/PrismaCrewWorkflowRepository'
+const crewWorkflowRepo = usePrisma ? new PrismaCrewWorkflowRepository(new PrismaClient()) : new InMemoryCrewWorkflowRepository()
+
+import { LangGraphWorkflowExecutor } from '@/infrastructure/langgraph/LangGraphWorkflowExecutor'
+const workflowExecutor = new LangGraphWorkflowExecutor()
+
+
+// Harness Repos
+const inboundEventRepo = usePrisma ? new PrismaInboundEventRepository() : new InMemoryInboundEventRepository()
+const queueProvider    = new InMemoryQueueProvider()
+const traceRepo        = usePrisma ? new PrismaTraceRepository() : new InMemoryTraceRepository()
+const usageLimiter     = new InMemoryUsageLimiter()
+const contactRepo      = usePrisma ? new PrismaContactRepository() : new InMemoryContactRepository()
+const identityRepo     = usePrisma ? new PrismaContactChannelIdentityRepository() : new InMemoryContactChannelIdentityRepository()
+const summaryRepo      = usePrisma ? new PrismaConversationSummaryRepository() : new InMemoryConversationSummaryRepository()
+const contactMemoryRepo = usePrisma ? new PrismaContactMemoryRepository() : new InMemoryContactMemoryRepository()
+const lifecycleRepo    = usePrisma ? new PrismaConversationLifecycleRepository() : new InMemoryConversationLifecycleRepository()
 
 // ─── Providers ────────────────────────────────────────────────────────────────
 
@@ -117,6 +195,27 @@ const llmProvider = useOpenAI ? new OpenAILLMProvider() : {
 const extractState = new ExtractAndUpdateState(qualStateRepo, llmProvider)
 
 // ─── Use-cases ────────────────────────────────────────────────────────────────
+
+const receiveInboundEvent = new ReceiveInboundEvent(inboundEventRepo, queueProvider)
+const traceRecorder       = new RecordExecutionTrace(traceRepo)
+const resolveContact      = new ResolveOrCreateContact(contactRepo, identityRepo)
+const memoryPolicy        = new ApplyMemoryPolicy(conversationRepo, summaryRepo, contactMemoryRepo)
+const summarizeConversation = new SummarizeConversation(conversationRepo, summaryRepo, llmProvider)
+const applyLifecycleTransition = new ApplyLifecycleTransition(conversationRepo, lifecycleRepo)
+const requestHumanHandoff = new RequestHumanHandoff(applyLifecycleTransition)
+const acceptHumanHandoff = new AcceptHumanHandoff(applyLifecycleTransition)
+
+// Distillation
+const runKDL = new RunKDL(kdlInsightRepo, conversationRepo, tenantRepo, llmProvider)
+const reviewKDLInsight = new ReviewKDLInsight(kdlInsightRepo, knowledgeRepo)
+
+// Channels
+const channelDispatcherFactory = new ChannelDispatcherFactory()
+channelDispatcherFactory.register('WHATSAPP', () => new WhatsAppDispatcher(channelConfigRepo))
+channelDispatcherFactory.register('EMAIL', () => new EmailDispatcher(channelConfigRepo))
+
+const whatsappWebhookAdapter = new WhatsAppWebhookAdapter({ channelConfigRepo, receiveInboundEvent })
+const emailWebhookAdapter = new EmailWebhookAdapter({ channelConfigRepo, receiveInboundEvent })
 
 export const di = {
   // Auth
@@ -162,13 +261,45 @@ export const di = {
   // Conversation
   listConversations:       new ListConversations(conversationRepo),
   getConversationMessages: new GetConversationMessages(conversationRepo),
+  getConversationDetails:  new GetConversationDetails(conversationRepo, qualStateRepo, summaryRepo, lifecycleRepo),
   transferConversation:    new TransferConversation(conversationRepo, crewMemberRepo, auditLogger),
+  operatorReply:           new OperatorReply(conversationRepo, auditLogger),
   sendMessage:             null as unknown as SendMessage,
   // Usage Limits
   checkUsageLimit: new CheckAndEnforceUsageLimit(usageLimitRepo, usageCurrentRepo),
   recordUsage:     new RecordUsage(usageCurrentRepo, usageLimitRepo),
+  updateUsageLimit: new UpdateTenantUsageLimit(usageLimitRepo, auditLogger),
   usageLimitRepo,
   usageCurrentRepo,
+
+  // Harness - Fase 2.2
+  receiveInboundEvent,
+  traceRecorder,
+  usageLimiter,
+  resolveContact,
+  memoryPolicy,
+  summarizeConversation,
+  applyLifecycleTransition,
+  requestHumanHandoff,
+  acceptHumanHandoff,
+  orchestrateInboundMessage: null as unknown as OrchestrateInboundMessage,
+  // Distillation
+  kdlInsightRepo,
+  runKDL,
+  reviewKDLInsight,
+
+  // Channels
+  channelConfigRepo,
+  createChannelConfig: new CreateChannelConfig(channelConfigRepo),
+  listChannelConfigs: new ListChannelConfigs(channelConfigRepo),
+  deleteChannelConfig: new DeleteChannelConfig(channelConfigRepo),
+  whatsappWebhookAdapter,
+  emailWebhookAdapter,
+
+  // Analytics
+  analyticsRepo,
+  getOverviewMetrics: new GetOverviewMetrics(analyticsRepo),
+  getAgentMetrics: new GetAgentMetrics(analyticsRepo),
 }
 
 // SendMessage depende de di.buildRAGContext — resolvido após criação do objeto
@@ -181,4 +312,19 @@ di.sendMessage = new SendMessage(
   crewMemberRepo,
   di.transferConversation,
   di.checkUsageLimit,
+  di.recordUsage,
 )
+
+di.orchestrateInboundMessage = new OrchestrateInboundMessage(
+  inboundEventRepo,
+  conversationRepo,
+  resolveContact,
+  memoryPolicy,
+  usageLimiter,
+  traceRecorder,
+  di.sendMessage,
+  channelDispatcherFactory,
+  workflowExecutor,
+  crewWorkflowRepo,
+)
+

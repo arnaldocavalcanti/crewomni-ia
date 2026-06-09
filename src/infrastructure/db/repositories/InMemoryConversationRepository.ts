@@ -134,4 +134,35 @@ export class InMemoryConversationRepository implements IConversationRepository {
 
     return Object.entries(countsByAgent).map(([agentId, count]) => ({ agentId, count }))
   }
+
+  async updateConversationStatus(conversationId: string, status: string, tenantId: string): Promise<void> {
+    const conv = this.conversations.find((c) => c.id === conversationId && c.tenantId === tenantId)
+    if (conv) {
+      conv.status = status as any
+      conv.updatedAt = new Date()
+    }
+  }
+
+  async listClosedConversations(limit: number): Promise<Conversation[]> {
+    return this.conversations
+      .filter((c) => (c.status as string) === 'CLOSED')
+      .slice(0, limit)
+  }
+
+  async getMessageHistory(
+    conversationId: string,
+    tenantId: string,
+    limit: number
+  ): Promise<Array<{ id: string; role: 'USER' | 'ASSISTANT' | 'OPERATOR'; content: string; createdAt: Date }>> {
+    const messages = this.messages
+      .filter((m) => m.conversationId === conversationId && m.tenantId === tenantId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      .slice(-limit)
+    return messages.map(m => ({
+      id: m.id,
+      role: m.role as 'USER' | 'ASSISTANT' | 'OPERATOR',
+      content: m.content,
+      createdAt: m.createdAt,
+    }))
+  }
 }

@@ -25,7 +25,9 @@ function makeTenantRepo(tenants: Record<string, any>) {
       Promise.resolve(Object.values(tenants).find((t: any) => t.slug === slug) ?? null)
     ),
     create: vi.fn(),
-    updateStatus: vi.fn(), update: vi.fn(),
+    updateStatus: vi.fn(), 
+    update: vi.fn(),
+    isKdlOptedOut: vi.fn((id: string) => Promise.resolve(false)),
   } as ITenantRepository
 }
 

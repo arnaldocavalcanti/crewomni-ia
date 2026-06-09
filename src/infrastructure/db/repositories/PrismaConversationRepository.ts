@@ -47,6 +47,13 @@ export class PrismaConversationRepository implements IConversationRepository {
     })
   }
 
+  async updateConversationStatus(conversationId: string, status: string, tenantId: string): Promise<void> {
+    await this.db.conversation.updateMany({
+      where: { id: conversationId, tenantId },
+      data: { status },
+    })
+  }
+
   async createMessage(data: CreateMessageData): Promise<Message> {
     const [r] = await this.db.$transaction([
       this.db.message.create({
@@ -126,6 +133,33 @@ export class PrismaConversationRepository implements IConversationRepository {
       agentId: g.agentId,
       count: g._sum.messageCount ?? 0,
     }))
+  }
+
+  async getMessageHistory(
+    conversationId: string,
+    tenantId: string,
+    limit: number
+  ): Promise<Array<{ id: string; role: 'USER' | 'ASSISTANT'; content: string; createdAt: Date }>> {
+    const records = await this.db.message.findMany({
+      where: { conversationId, tenantId },
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+    })
+    return records.map((r: any) => ({
+      id: r.id,
+      role: r.role as 'USER' | 'ASSISTANT' | 'OPERATOR',
+      content: r.content,
+      createdAt: r.createdAt,
+    }))
+  }
+
+  async listClosedConversations(limit: number): Promise<Conversation[]> {
+    const records = await this.db.conversation.findMany({
+      where: { status: 'CLOSED' },
+      take: limit,
+      orderBy: { updatedAt: 'desc' },
+    })
+    return records.map((r: any) => this.toConversation(r))
   }
 
   // ─── Mappers ────────────────────────────────────────────────────────────────

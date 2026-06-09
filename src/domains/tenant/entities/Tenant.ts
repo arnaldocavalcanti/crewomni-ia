@@ -29,4 +29,5 @@ export type TenantSettings = {
   dpoEmail?: string
   privacyPolicyUrl?: string
   dataRetentionDays: number
+  kdlOptOut?: boolean
 }

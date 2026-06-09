@@ -31,4 +31,13 @@ export class InMemoryTenantRepository implements ITenantRepository {
     const tenant = tenants.get(id)
     if (tenant) tenants.set(id, { ...tenant, status })
   }
+
+  private optOuts = new Set<string>()
+  async isKdlOptedOut(tenantId: string): Promise<boolean> {
+    return this.optOuts.has(tenantId)
+  }
+  setKdlOptOut(tenantId: string, optOut: boolean): void {
+    if (optOut) this.optOuts.add(tenantId)
+    else this.optOuts.delete(tenantId)
+  }
 }

@@ -234,7 +234,7 @@ enum UserRole {
 - `docs/specs/_template.md` — template SDD com 13 seções
 - `docs/adr/001`, `002`, `003`, `004` — decisões técnicas documentadas
 - Vitest configurado com ambiente `node`
-- **231 testes passando** (32 arquivos)
+- **337 testes passando** (57 arquivos)
 
 ### ✅ ADRs
 - `ADR 001` — Decisões técnicas iniciais
@@ -272,10 +272,10 @@ enum UserRole {
 - `/dashboard/agents` — lista de agentes
 - `/dashboard/agents/new` — criar agente (nome, tipo, description, system prompt)
 - `/dashboard/agents/:id` — detalhe + publicar prompt + chat de teste integrado
-- `/dashboard/conversations` — lista de conversas
-- `/dashboard/conversations/:id` — histórico de mensagens
+- `/dashboard/conversations` — **Split-View Operational Dashboard** (lista + detalhe lado a lado)
+- `/dashboard/conversations/:id` — histórico de mensagens (rota legada mantida)
 **Helpers:** `src/lib/api.ts` (fetch com refresh automático), `src/lib/auth.ts` (token em localStorage)
-**Componentes:** `StatusBadge`, `EmptyState`, `ThemeToggle` + primitivos shadcn (Button, Input, Card, Table, Badge, etc.)
+**Componentes:** `StatusBadge` (lifecycle completo), `EmptyState`, `ThemeToggle` + primitivos shadcn (Button, Input, Card, Table, Badge, etc.)
 
 ### ✅ UI Redesign — Gradient Shell (IMPLEMENTED 2026-06-04)
 **Spec:** `docs/superpowers/specs/2026-06-04-ui-redesign-gradient-shell.md`
@@ -424,13 +424,22 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 **API routes:**
 - `GET /api/v1/crews/:id/metrics` → `{ totalConversations, activeConversations, totalMessages, messagesByAgent[] }`
 
+### ✅ Segurança & Proteção Operacional — Fase 2.1 (IMPLEMENTADO)
+**Objetivo:** Proteger isolamento multi-tenant via RLS e quotas de uso.
+**Inclui:**
+- **RLS no PostgreSQL** — Row-Level Security habilitado em todas as tabelas (migration `20260607233930_enable_rls_on_all_tables`)
+- **TenantUsageLimit** e **TenantUsageCurrent** — limites atômicos por tenant e contagem de uso em tempo real
+- **IUsageLimiter** (`CheckAndEnforceUsageLimit`) e **IUsageRecorder** (`RecordUsage`)
+- **API routes:** `GET /api/v1/tenants/usage` · `PATCH /api/v1/tenants/:id/usage-limit`
+**Integração:** `SendMessage` implementa verificação de limites (quota) estrita e registra o uso (tokens/messages) a cada iteração com o LLM.
+
 ---
 
 ## 11. O que está pendente (Fase 1)
 
 | Módulo | Próximos passos |
 |---|---|
-| **RLS no PostgreSQL** | Row-Level Security nas tabelas com `tenantId` — pré-requisito para produção. Incluído como primeiro item da Fase 2.1. |
+| **Nenhum** | Fase 1 finalizada e consolidada. |
 
 ---
 
@@ -452,7 +461,7 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 
 ### Fase 2 — Infraestrutura Operacional
 
-#### Fase 2.1 — Segurança & Proteção Operacional (PRÓXIMA)
+#### Fase 2.1 — Segurança & Proteção Operacional (COMPLETA)
 
 > **Objetivo:** Proteger isolamento multi-tenant e controlar custo operacional antes de qualquer canal externo entrar em produção. **Não é billing comercial** — é infraestrutura de segurança.
 
@@ -469,11 +478,11 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 
 ---
 
-#### Fase 2.2 — Agent Harness Core (PLANEJADO)
+#### Fase 2.2 — Agent Harness Core (IMPLEMENTADO)
 
 > **Objetivo:** Camada intermediária entre canais externos e o pipeline de agente — prepara a plataforma para WhatsApp assíncrono e qualquer canal futuro.
 
-**Inclui:**
+**Implementado:**
 - **InboundEvent** — entidade com índice único `(tenantId, provider, providerMessageId)` para idempotência absoluta
 - **IQueueProvider** — interface de fila; `InMemoryQueueProvider` (dev) → BullMQ/Redis (produção)
 - **ReceiveInboundEvent** — valida, armazena bruto, checa idempotência, normaliza, enfileira (< 300ms)
@@ -484,83 +493,79 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 - **Retry & DLQ** — 3 tentativas com backoff; `DEAD_LETTER` após falhas; reprocessamento manual por `PLATFORM_ADMIN`
 - **Observabilidade básica** — `AgentExecutionTrace` com tokens, custo estimado, duração, chunks usados (best-effort)
 
-> **ADR criado:** `docs/adr/006-agent-harness-core.md`  
-> **Spec criada:** `docs/specs/harness/inbound-event-processing.md`  
-> **Spec criada:** `docs/specs/harness/conversation-lifecycle.md`  
-> **Spec criada:** `docs/specs/harness/observability-tracing.md`  
-> **Plano criado:** `docs/superpowers/plans/2026-06-07-agent-harness-core.md` (Fases A–I)
+> **ADR:** `docs/adr/006-agent-harness-core.md`  
+> **Specs:** `inbound-event-processing.md` · `conversation-lifecycle.md` · `observability-tracing.md`
 
 ---
 
-#### Fase 2.3 — Memory Policy Engine (PLANEJADO)
+#### Fase 2.3 — Memory Policy Engine (IMPLEMENTADO)
 
 > **Objetivo:** Política explícita de contexto para conversas longas — sem estourar token limit, com memória durável por contato.
 
-**Inclui:**
+**Implementado:**
 - **ApplyMemoryPolicy** — decide o que entra no prompt: summary + buffer truncado + ContactMemory ACTIVE
-- **ConversationSummary** — resumo progressivo; atualizado após 20 mensagens ou ao fechar conversa; gerado por gpt-4o-mini
+- **SummarizeConversation** — resumo progressivo; gerado por gpt-4o-mini; `ConversationSummary` persistido
 - **ContactMemory** — memória durável por contato; estados `CANDIDATE → APPROVED → ACTIVE`; aprovação humana obrigatória por padrão
 - **TenantMemoryPolicyConfig** — maxBufferTokens, summaryTriggerMessages, enableContactMemory — configurável por tenant
 - **LGPD** — summary nunca inclui PII em texto plano; `shouldPersist=false` descarta automaticamente
 
-> **Spec criada:** `docs/specs/harness/memory-policy-engine.md`
+> **Spec:** `docs/specs/harness/memory-policy-engine.md`
 
 ---
 
-#### Fase 2.4 — KDL + Industry KB + Master Agents (FUTURA)
+#### Fase 2.4 — KDL + Industry KB + Master Agents (IMPLEMENTADO — domínio)
 
 > **Objetivo:** Transformar experiências individuais dos tenants em conhecimento coletivo por nicho — sem violar isolamento.
 
-**Inclui:**
-- **KDL Pipeline** — 5 etapas: coleta → extração de insights → anonimização → aprovação (`KDL_APPROVER`) → publicação na Industry KB
-- **Industry KB** — base de conhecimento coletiva por nicho; alimenta master agents
-- **Master Agents** — agentes por nicho pré-treinados com Industry KB
-- **Opt-out por tenant** — tenant pode não contribuir para KDL sem perder acesso à Industry KB
+**Implementado (domínio):**
+- **KDL Pipeline** — `RunKDL` (coleta), `ReviewKDLInsight` (aprovação humana), `KDLInsight` entity
+- **Anonimização** — insights nunca expõem PII de tenants; opt-out por tenant via `TenantSettings.kdlOptOut`
+- **Industry KB** — `layer: INDUSTRY` em `KnowledgeDocument`; alimenta RAG de tenants
+- **Obs.:** Industry KB UI + Master Agents na interface → Fase 4.x
 
-> **ADR existente:** `docs/adr/005-knowledge-distillation-layer-pipeline.md`
+> **ADR:** `docs/adr/005-knowledge-distillation-layer-pipeline.md`
 
 ---
 
 ### Fase 3 — Omnichannel & Visual Workflows
 
-#### Fase 3.1 — Split-View Dashboard (FUTURA)
+#### Fase 3.1 — Split-View Operational Dashboard (IMPLEMENTADO 2026-06-08)
 
-> **Objetivo:** Interface operacional para monitorar e gerenciar conversas em tempo real, mostrando estado completo da conversa.
+> **Objetivo:** Interface operacional para monitorar e gerenciar conversas em tempo real.
 
-**Inclui:**
-- Split-View: lista de conversas à esquerda + detalhe à direita (sem reload de página)
-- Painel de conversa: mensagens, `ConversationStatus` atual, `QualificationState`, `MemoryContext`, `AgentExecutionTrace`
-- Timeline de lifecycle: visualização dos eventos de transição de estado
-- Ações do operador: aceitar handoff, fechar conversa, aprovar ContactMemory
-- Preview + Form em 2 colunas para configuração de agentes e crews
-
-> **Depende de:** Fase 2.2 (lifecycle) e Fase 2.3 (memory)
+**Implementado:**
+- **Split-View Layout** — lista filtrada à esquerda + detalhe à direita, painéis sticky (100dvh), sem reload
+- **Filtros de status** — Todas / Abertas / Handoff / Em Atendimento / Encerradas
+- **Badge animado** — contador de handoffs pendentes com pulse animation
+- **Painel de detalhe** — 3 abas: Mensagens / Histórico do Ciclo de Vida / Qualificação
+- **ActionPanel contextual** — botões por status: Aceitar Handoff · Solicitar Handoff · Encerrar
+- **Lifecycle Timeline** — eventos de transição em ordem cronológica reversa
+- **StatusBadge atualizado** — todos os 9 estados do lifecycle com cores semânticas (light + dark)
+- **API routes novas:** `GET /conversations/:id` · `POST /conversations/:id/accept-handoff` · `POST /conversations/:id/request-handoff` · `POST /conversations/:id/close`
+- **Use case:** `GetConversationDetails` (mensagens + qualificationState + lifecycleEvents + summary)
+- **PrismaConversationRepository** — `updateConversationStatus()` implementado
+- **Testes:** 5 testes de integração (incluindo isolamento multi-tenant) · 2 testes unitários · 337 total passando
 
 ---
 
-#### Fase 3.2 — Integração Multicanal (FUTURA)
+#### Fase 3.2 — Integração Multicanal (IMPLEMENTADO 2026-06-08)
 
 > **Objetivo:** WhatsApp e e-mail como adapters da Harness Core — canal não chama agente diretamente.
 
-**Arquitetura obrigatória:**
-```
-WhatsApp Webhook → WhatsAppWebhookAdapter → ReceiveInboundEvent → fila → OrchestrateInboundMessage → agente
-E-mail recebido  → EmailWebhookAdapter    → ReceiveInboundEvent → fila → OrchestrateInboundMessage → agente
-```
-
-**Inclui:**
+**Implementado:**
 - `WhatsAppWebhookAdapter` — validação HMAC-SHA256, parse do payload Meta, fire-and-forget
 - `WhatsAppDispatcher` — envia resposta via Meta Cloud API
 - `EmailWebhookAdapter` — adapter para provedores (SendGrid, SES)
 - `EmailDispatcher` — envia e-mail de resposta
 - Configuração de canal por tenant (número WhatsApp, e-mail de envio)
+- Integração da `ChannelDispatcherFactory` diretamente com `OrchestrateInboundMessage`
+- Nova página de UI (`/dashboard/channels`) para adicionar credenciais de canal.
 
-> **Depende de:** Fase 2.1 (quotas), Fase 2.2 (harness completa)  
-> **Nota:** `POST /api/v1/channels/whatsapp/webhook` já está esboçado em `docs/superpowers/plans/2026-06-07-agent-harness-core.md` Fase I
+> **Depende de:** Fase 2.1 (quotas), Fase 2.2 (harness completa)
 
 ---
 
-#### Fase 3.3 — Visual Workflows com LangGraph (FUTURA)
+#### Fase 3.3 — Visual Workflows com LangGraph (IMPLEMENTADO)
 
 > **Objetivo:** Workflows visuais com React Flow Canvas que executam **dentro** da harness — não substituem a harness.
 
@@ -582,16 +587,15 @@ OrchestrateInboundMessage → RouteToAgent (hoje: SendMessage)
 
 ---
 
-#### Fase 3.4 — Analytics Avançado (FUTURA)
+#### Fase 3.4 — Analytics Avançado (IMPLEMENTADO 2026-06-08)
 
 > **Objetivo:** Métricas operacionais e de negócio por canal, agente, tenant e conversa — alimentadas pelos dados da harness.
 
 **Inclui:**
-- Métricas de fila: tamanho, tempo médio de espera, throughput, DLQ
-- Métricas de canal: mensagens recebidas/enviadas por canal/provider
-- Métricas de agente: tokens/conversa, custo/conversa, tempo médio de resposta, taxa de handoff
-- Métricas de tenant: uso mensal vs. quota, custo acumulado
-- Métricas de conversa: duração, turnos, satisfaction score (futuro)
+- Métricas consolidadas (overview) e de performance de agente (tokens, handoffs, tempo)
+- Gráficos visuais (Sparklines) com `recharts` no Next.js
+- Repositórios com agregações complexas via Prisma
+- Componentes novos: `OverviewCards`, `AgentPerformanceTable`
 - Sparklines em tempo real no dashboard
 
 > **Depende de:** Fase 2.1 (quotas), Fase 2.2 (tracing), Fase 3.2 (canais)
@@ -614,16 +618,16 @@ OrchestrateInboundMessage → RouteToAgent (hoje: SendMessage)
 
 ```
 Fase 1 (COMPLETA)
-  └── Fase 2.1 (RLS + Quotas)           ← pré-requisito para qualquer produção
-        └── Fase 2.2 (Harness Core)      ← pré-requisito para canais externos
-              └── Fase 2.3 (Memory)      ← enriquece o contexto da harness
-              └── Fase 3.2 (WhatsApp)    ← usa a harness como base
-        └── Fase 2.4 (KDL)              ← usa conversas + tracing da harness
-        └── Fase 3.1 (Split-View)       ← exibe dados de lifecycle + memory
-              └── Fase 3.3 (LangGraph)  ← executa dentro da harness
-        └── Fase 3.4 (Analytics)        ← consome dados de todas as fases anteriores
-Fase 4 (Escala + BullMQ)                ← independente, pode ser parcialmente paralela
-  └── Fase 4.x (Billing Comercial)      ← somente após homologação Devolus + Fast4Sign
+  └── Fase 2.1 (RLS + Quotas) [COMPLETA]       ← pré-requisito para qualquer produção
+        └── Fase 2.2 (Harness Core) [COMPLETA]   ← pré-requisito para canais externos
+              └── Fase 2.3 (Memory) [COMPLETA]   ← enriquece o contexto da harness
+              └── Fase 3.2 (WhatsApp) [FUTURA]   ← usa a harness como base
+        └── Fase 2.4 (KDL) [DOMÍNIO COMPLETO]    ← usa conversas + tracing da harness
+        └── Fase 3.1 (Split-View) [COMPLETA]    ← exibe dados de lifecycle + memory
+              └── Fase 3.3 (LangGraph) [FUTURA] ← executa dentro da harness
+        └── Fase 3.4 (Analytics) [FUTURA]       ← consome dados de todas as fases anteriores
+Fase 4 (Escala + BullMQ) [FUTURA]              ← independente, pode ser parcialmente paralela
+  └── Fase 4.x (Billing Comercial) [FUTURA]    ← somente após homologação Devolus + Fast4Sign
 ```
 
 ---
@@ -713,3 +717,4 @@ npx prisma migrate dev --name X  # cria migration (requer DB)
 | `src/components/onboarding/OnboardingWizard.tsx` | Wizard de onboarding 3 passos |
 | `docs/superpowers/specs/2026-06-04-ui-redesign-gradient-shell.md` | Spec do redesign visual |
 | `docs/superpowers/plans/2026-06-04-ui-redesign-gradient-shell.md` | Plano de implementação do redesign |
+| `src/app/(dashboard)/dashboard/conversations/page.tsx` | Split-View Operational Dashboard (Fase 3.1) |

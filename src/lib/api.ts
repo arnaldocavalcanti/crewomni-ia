@@ -93,8 +93,26 @@ export const api = {
       return request<ConversationsListOutput>(`/conversations?${q}`)
     },
     getMessages: (id: string) => request<ConversationDetail>(`/conversations/${id}/messages`),
+    getDetails: (id: string) => request<ConversationDetailsOutput>(`/conversations/${id}`),
     sendMessage: (payload: SendMessagePayload) =>
       request<SendMessageOutput>('/conversations/message', { method: 'POST', body: JSON.stringify(payload) }),
+    requestHandoff: (id: string, reason: string) =>
+      request<HandoffActionOutput>(`/conversations/${id}/request-handoff`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
+    acceptHandoff: (id: string) =>
+      request<HandoffActionOutput>(`/conversations/${id}/accept-handoff`, { method: 'POST' }),
+    close: (id: string, reason?: string) =>
+      request<{ success: boolean; status: string }>(`/conversations/${id}/close`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
+    reply: (id: string, content: string) =>
+      request<{ messageId: string; content: string; createdAt: Date }>(`/conversations/${id}/reply`, {
+        method: 'POST',
+        body: JSON.stringify({ content }),
+      }),
   },
 
   // ─── Knowledge ────────────────────────────────────────────────────────────
@@ -243,6 +261,45 @@ export type MessageItem = {
   id: string; role: string; content: string
   metadata: { model?: string; tokensUsed?: number; failed?: boolean } | null
   createdAt: string
+}
+
+export type QualificationState = {
+  leadScore: number | null
+  intent: string | null
+  sentiment: string | null
+  qualificationStatus: string | null
+  extractedData: Record<string, unknown>
+  updatedAt: string
+}
+
+export type LifecycleEvent = {
+  id: string
+  fromStatus: string
+  toStatus: string
+  actor: string
+  actorId: string | null
+  reason: string | null
+  createdAt: string
+}
+
+export type ConversationDetailsOutput = {
+  conversationId: string
+  agentId: string
+  externalUserId: string | null
+  status: string
+  messages: MessageItem[]
+  qualificationState: QualificationState | null
+  lifecycleEvents: LifecycleEvent[]
+  summary: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type HandoffActionOutput = {
+  conversationId: string
+  previousStatus: string
+  currentStatus: string
+  eventId: string
 }
 
 export type SendMessagePayload = {

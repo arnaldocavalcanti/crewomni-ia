@@ -14,4 +14,5 @@ export interface ITenantRepository {
   findBySlug(slug: string): Promise<Tenant | null>
   create(data: CreateTenantData): Promise<Tenant>
   updateStatus(id: string, status: TenantStatus): Promise<void>
+  isKdlOptedOut(tenantId: string): Promise<boolean>
 }

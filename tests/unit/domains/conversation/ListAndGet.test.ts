@@ -47,7 +47,14 @@ function makeRepo(): IConversationRepository {
     listMessages: vi.fn().mockResolvedValue([makeMessage()]),
     countConversationsByCrew: vi.fn().mockResolvedValue({ total: 0, active: 0 }),
     countMessagesByCrewAndAgent: vi.fn().mockResolvedValue([]),
-  }
+    findActiveConversationsByContact: vi.fn(),
+    listConversationsByTenant: vi.fn(),
+    addMessage: vi.fn(),
+    findMessagesByConversationId: vi.fn(),
+    updateConversationStatus: vi.fn(),
+    listClosedConversations: vi.fn(),
+    getMessageHistory: vi.fn(),
+  } as unknown as IConversationRepository
 }
 
 // ─── ListConversations ────────────────────────────────────────────────────────

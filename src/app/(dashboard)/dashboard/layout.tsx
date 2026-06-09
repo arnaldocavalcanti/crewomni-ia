@@ -14,6 +14,8 @@ import {
   Users,
   Menu,
   X,
+  BarChart3,
+  Share2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
@@ -76,6 +78,8 @@ const NAV = [
   { href: '/dashboard/agents', label: 'Agentes', icon: Bot },
   { href: '/dashboard/conversations', label: 'Conversas', icon: MessageSquare },
   { href: '/dashboard/departments', label: 'Departamentos', icon: Building2 },
+  { href: '/dashboard/channels', label: 'Canais', icon: Share2 },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

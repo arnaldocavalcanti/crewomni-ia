@@ -51,7 +51,7 @@ function makeRepo(): IConversationRepository {
     listMessages: vi.fn(),
     countConversationsByCrew: vi.fn().mockResolvedValue({ total: 0, active: 0 }),
     countMessagesByCrewAndAgent: vi.fn().mockResolvedValue([]),
-  }
+  } as unknown as IConversationRepository
 }
 
 function makeRAG(): Pick<BuildRAGContext, 'execute'> {

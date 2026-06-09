@@ -42,7 +42,7 @@ function makeIsolatedRepo(): IConversationRepository {
     ]),
     countConversationsByCrew: vi.fn().mockResolvedValue({ total: 0, active: 0 }),
     countMessagesByCrewAndAgent: vi.fn().mockResolvedValue([]),
-  }
+  } as unknown as IConversationRepository
 }
 
 describe('Conversation Isolation', () => {

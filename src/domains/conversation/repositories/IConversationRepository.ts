@@ -23,4 +23,11 @@ export interface IConversationRepository {
   
   countConversationsByCrew(crewId: string, tenantId: string): Promise<{ total: number; active: number }>
   countMessagesByCrewAndAgent(crewId: string, tenantId: string): Promise<{ agentId: string; count: number }[]>
+  updateConversationStatus(conversationId: string, status: string, tenantId: string): Promise<void>
+  listClosedConversations(limit: number): Promise<Conversation[]>
+  getMessageHistory(
+    conversationId: string,
+    tenantId: string,
+    limit: number
+  ): Promise<Array<{ id: string; role: 'USER' | 'ASSISTANT' | 'OPERATOR'; content: string; createdAt: Date }>>
 }

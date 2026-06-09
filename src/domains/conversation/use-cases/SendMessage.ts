@@ -1,3 +1,4 @@
+import { realtimeService } from '@/infrastructure/realtime/RealtimeService'
 import { AppError } from '@/shared/errors/AppError'
 import type { IConversationRepository } from '../repositories/IConversationRepository'
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
@@ -39,6 +40,7 @@ export class SendMessage {
     private crewMemberRepo: ICrewMemberRepository,
     private transferConversation: TransferConversation,
     private checkUsageLimit?: { execute(input: { tenantId: string }): Promise<{ allowed: boolean; reason?: string }> },
+    private recordUsage?: { execute(input: { tenantId: string, inputTokens: number, outputTokens: number, estimatedCostUsd: number }): Promise<void> },
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageOutput> {
@@ -82,11 +84,19 @@ export class SendMessage {
     }))
 
     // 4. Persist USER message (after fetching history)
-    await this.repo.createMessage({
+    const userMessage = await this.repo.createMessage({
       conversationId,
       tenantId: input.tenantId,
       role: MessageRole.USER,
       content: input.message.trim(),
+    })
+
+    realtimeService.publishEvent(input.tenantId, 'MESSAGE_RECEIVED', {
+      conversationId,
+      messageId: userMessage.id,
+      content: userMessage.content,
+      role: userMessage.role,
+      createdAt: userMessage.createdAt.toISOString(),
     })
 
     // 5. Load or create qualification state
@@ -208,6 +218,24 @@ export class SendMessage {
       content: reply,
       metadata: failed ? { failed: true } : { model, tokensUsed, chunksUsed },
     })
+
+    realtimeService.publishEvent(input.tenantId, 'MESSAGE_SENT', {
+      conversationId,
+      messageId: assistantMessage.id,
+      content: assistantMessage.content,
+      role: assistantMessage.role,
+      createdAt: assistantMessage.createdAt.toISOString(),
+    })
+
+    // Record usage
+    if (this.recordUsage && !failed) {
+      await this.recordUsage.execute({
+        tenantId: input.tenantId,
+        inputTokens: 0,
+        outputTokens: tokensUsed,
+        estimatedCostUsd: (tokensUsed / 1000) * 0.002, // simplistic estimate
+      })
+    }
 
     // 9. Auto-close if message limit reached
     const messageCount = await this.repo.countMessages(conversationId)

@@ -6,6 +6,7 @@ export enum ConversationStatus {
 export enum MessageRole {
   USER      = 'USER',
   ASSISTANT = 'ASSISTANT',
+  OPERATOR  = 'OPERATOR',
 }
 
 export type MessageMetadata = {

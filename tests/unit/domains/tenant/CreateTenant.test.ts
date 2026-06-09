@@ -35,7 +35,7 @@ function makeRepos() {
       createdAt: new Date('2026-05-29'),
     }),
     updateStatus: vi.fn(),
-  }
+  } as unknown as ITenantRepository
   const userRepo: IUserRepository = {
     findByEmail: vi.fn(),
     findById: vi.fn(),

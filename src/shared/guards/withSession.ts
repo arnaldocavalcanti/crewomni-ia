@@ -40,3 +40,22 @@ export async function requirePlatformAdmin(request: NextRequest): Promise<Sessio
   }
   return session
 }
+
+export async function getServerSession(): Promise<Session | null> {
+  const { cookies } = await import('next/headers')
+  const cookieStore = await cookies()
+  const token = cookieStore.get('auth-token')?.value
+  if (!token) return null
+
+  try {
+    const { payload } = await jwtVerify(token, jwtSecret())
+    return {
+      userId: payload.userId as string,
+      tenantId: (payload.tenantId as string | null) ?? null,
+      role: payload.role as UserRole,
+      isPlatformAdmin: payload.role === 'PLATFORM_ADMIN',
+    }
+  } catch {
+    return null
+  }
+}

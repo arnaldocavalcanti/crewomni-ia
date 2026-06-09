@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { YoutubeTranscript } from 'youtube-transcript'
-import { getSession } from '@/shared/guards/withSession'
+import { getValidatedSession as getSession } from '@/infrastructure/guards/withValidatedSession'
 import { errorResponse } from '@/shared/utils/apiResponse'
 import { AppError } from '@/shared/errors/AppError'
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, Mail, MessageCircle, AlertCircle } from 'lucide-react'
+import { Trash2, Mail, MessageCircle, AlertCircle, SendHorizontal, X, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 
@@ -32,6 +32,12 @@ export function ChannelsClient({ initialChannels }: { initialChannels: Channel[]
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Test email modal
+  const [testChannel, setTestChannel] = useState<Channel | null>(null)
+  const [testEmail, setTestEmail] = useState('')
+  const [testLoading, setTestLoading] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+
   const handleDelete = async (id: string) => {
     if (!confirm('Deseja realmente remover este canal?')) return
     setLoading(true)
@@ -42,6 +48,21 @@ export function ChannelsClient({ initialChannels }: { initialChannels: Channel[]
       alert(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleTest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!testChannel) return
+    setTestLoading(true)
+    setTestResult(null)
+    try {
+      const data = await api.channels.test(testChannel.id, testEmail)
+      setTestResult({ success: true, message: data.message || `Email enviado para ${testEmail}` })
+    } catch (err: any) {
+      setTestResult({ success: false, message: err.message || 'Falha ao enviar email de teste' })
+    } finally {
+      setTestLoading(false)
     }
   }
 
@@ -104,10 +125,22 @@ export function ChannelsClient({ initialChannels }: { initialChannels: Channel[]
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
             Conectado
           </span>
+          {!isWhatsapp && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => { setTestChannel(channel); setTestEmail(''); setTestResult(null) }}
+              disabled={loading}
+            >
+              <SendHorizontal className="h-3.5 w-3.5" />
+              Testar
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={() => handleDelete(channel.id)} disabled={loading}>
             <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
@@ -118,6 +151,54 @@ export function ChannelsClient({ initialChannels }: { initialChannels: Channel[]
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
+
+      {/* Test Email Modal */}
+      {testChannel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">Testar canal E-mail</h3>
+              <button
+                onClick={() => { setTestChannel(null); setTestResult(null) }}
+                className="rounded-md p-1 text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Um email de teste será enviado do endereço <strong>{testChannel.fromAddress}</strong> para o destinatário abaixo.
+            </p>
+            {testResult && (
+              <div className={`mb-4 flex items-start gap-2 rounded-md p-3 text-sm ${
+                testResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+              }`}>
+                <CheckCircle2 className={`mt-0.5 h-4 w-4 shrink-0 ${testResult.success ? 'text-green-600' : 'text-red-600'}`} />
+                {testResult.message}
+              </div>
+            )}
+            <form onSubmit={handleTest} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground">Email de destino</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="seu@email.com"
+                  className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-blue focus:outline-none focus:ring-1 focus:ring-blue"
+                  value={testEmail}
+                  onChange={e => setTestEmail(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="ghost" onClick={() => { setTestChannel(null); setTestResult(null) }}>Cancelar</Button>
+                <Button type="submit" variant="gradient" disabled={testLoading}>
+                  {testLoading ? 'Enviando...' : 'Enviar teste'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       
       {channels.length > 0 && (
         <div className="space-y-4">

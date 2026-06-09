@@ -135,7 +135,35 @@ import { PrismaContactMemoryRepository } from '@/infrastructure/db/repositories/
 const usePrisma = !!process.env.DATABASE_URL
 const useOpenAI = !!process.env.OPENAI_API_KEY
 
-// ─── Repositories ─────────────────────────────────────────────────────────────
+// ─── Startup guard ────────────────────────────────────────────────────────────
+// DATABASE_URL is MANDATORY in all environments except automated tests (Vitest).
+// In-memory repos are ONLY allowed when VITEST env var is present (test runner).
+// This prevents the silent data-loss scenario where the server starts without a
+// DB connection and writes data to volatile memory that disappears on restart.
+if (!usePrisma) {
+  const isTestEnvironment = !!process.env.VITEST
+  const allowInMemory = process.env.ALLOW_INMEMORY === 'true'
+
+  if (!isTestEnvironment && !allowInMemory) {
+    throw new Error(
+      '\n\n' +
+      '╔══════════════════════════════════════════════════════════════╗\n' +
+      '║  FATAL: DATABASE_URL is not set                             ║\n' +
+      '║                                                              ║\n' +
+      '║  All data would be stored in VOLATILE MEMORY and lost       ║\n' +
+      '║  every time the server restarts.                             ║\n' +
+      '║                                                              ║\n' +
+      '║  Fix:                                                        ║\n' +
+      '║    1. docker compose up -d   (starts PostgreSQL:5434)        ║\n' +
+      '║    2. Restart the dev server                                 ║\n' +
+      '║                                                              ║\n' +
+      '║  For unit tests only: set VITEST=true (done automatically)  ║\n' +
+      '╚══════════════════════════════════════════════════════════════╝\n'
+    )
+  }
+}
+
+
 
 const userRepo       = usePrisma ? new PrismaUserRepository()                    : new InMemoryUserRepository()
 const tokenRepo      = usePrisma ? new PrismaRefreshTokenRepository()             : new InMemoryRefreshTokenRepository()

@@ -4,6 +4,7 @@ const ERROR_STATUS: Record<string, number> = {
   INVALID_CREDENTIALS: 401,
   TOKEN_EXPIRED: 401,
   SESSION_EXPIRED: 401,
+  STALE_SESSION: 401,    // tenantId in JWT no longer valid in DB → force re-login
   UNAUTHORIZED: 401,
   INVALID_API_KEY: 401,
   ACCOUNT_LOCKED: 403,

@@ -1,5 +1,5 @@
 import { type NextRequest } from 'next/server'
-import { getSession } from '@/shared/guards/withSession'
+import { getValidatedSession as getSession } from '@/infrastructure/guards/withValidatedSession'
 import { errorResponse } from '@/shared/utils/apiResponse'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB

@@ -4,29 +4,31 @@ import { GET as GET_CHANNELS, POST as POST_CHANNELS } from '@/app/api/v1/channel
 import { DELETE as DELETE_CHANNEL } from '@/app/api/v1/channels/[id]/route'
 import { GET as GET_WHATSAPP, POST as POST_WHATSAPP } from '@/app/api/webhooks/whatsapp/route'
 import { POST as POST_EMAIL } from '@/app/api/webhooks/email/route'
-
+import { getValidatedSession } from '@/infrastructure/guards/withValidatedSession'
 import { di } from '@/infrastructure/di'
 
-// Mock getSession
-vi.mock('@/shared/guards/withSession', () => ({
-  getSession: vi.fn().mockResolvedValue({
-    userId: 'user-1',
-    tenantId: 'tenant-1',
-    role: 'TENANT_ADMIN'
-  })
+vi.mock('@/infrastructure/guards/withValidatedSession', () => ({
+  getValidatedSession: vi.fn(),
 }))
 
 describe('Channels API Routes Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
+    vi.mocked(getValidatedSession).mockResolvedValue({
+      userId: 'user-1',
+      tenantId: 'tenant-1',
+      role: 'TENANT_ADMIN' as any,
+      isPlatformAdmin: false,
+    })
+
     // Mock DI methods
     di.createChannelConfig = { execute: vi.fn().mockResolvedValue({ id: 'ch-1', provider: 'WHATSAPP' }) } as any
     di.listChannelConfigs = { execute: vi.fn().mockResolvedValue([{ id: 'ch-1', provider: 'WHATSAPP' }]) } as any
     di.deleteChannelConfig = { execute: vi.fn().mockResolvedValue(undefined) } as any
     di.whatsappWebhookAdapter = { process: vi.fn().mockResolvedValue(undefined) } as any
     di.emailWebhookAdapter = { process: vi.fn().mockResolvedValue(undefined) } as any
-    
+
     process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN = 'secret_token'
   })
 

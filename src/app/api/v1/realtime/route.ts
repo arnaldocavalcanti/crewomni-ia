@@ -1,5 +1,5 @@
 import { type NextRequest } from 'next/server'
-import { getSession } from '@/shared/guards/withSession'
+import { getValidatedSession as getSession } from '@/infrastructure/guards/withValidatedSession'
 import { realtimeService } from '@/infrastructure/realtime/RealtimeService'
 
 export const dynamic = 'force-dynamic'

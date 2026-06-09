@@ -191,6 +191,11 @@ export const api = {
       sendgridApiKey?: string | null
     }) => request<any>('/channels', { method: 'POST', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/channels/${id}`, { method: 'DELETE' }),
+    test: (id: string, to: string) =>
+      request<{ success: boolean; message: string }>(`/channels/${id}/test`, {
+        method: 'POST',
+        body: JSON.stringify({ to }),
+      }),
   },
 
   // ─── Analytics ─────────────────────────────────────────────────────────────

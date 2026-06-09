@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { di } from '@/infrastructure/di'
-import { getSession } from '@/shared/guards/withSession'
+import { getValidatedSession as getSession } from '@/infrastructure/guards/withValidatedSession'
 import { errorResponse } from '@/shared/utils/apiResponse'
 
 export async function GET(req: NextRequest) {

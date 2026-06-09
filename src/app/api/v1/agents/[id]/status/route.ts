@@ -2,7 +2,7 @@ import { type NextRequest } from 'next/server'
 import { z } from 'zod'
 import { di } from '@/infrastructure/di'
 import { errorResponse } from '@/shared/utils/apiResponse'
-import { getSession } from '@/shared/guards/withSession'
+import { getValidatedSession as getSession } from '@/infrastructure/guards/withValidatedSession'
 import { AgentStatus } from '@/domains/agent/entities/Agent'
 
 const schema = z.object({

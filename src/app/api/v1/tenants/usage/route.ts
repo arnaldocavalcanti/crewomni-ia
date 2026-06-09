@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server'
 import { di } from '@/infrastructure/di'
 import { errorResponse } from '@/shared/utils/apiResponse'
-import { getSession } from '@/shared/guards/withSession'
+import { getValidatedSession as getSession } from '@/infrastructure/guards/withValidatedSession'
 import { AppError } from '@/shared/errors/AppError'
 
 export async function GET(request: NextRequest) {

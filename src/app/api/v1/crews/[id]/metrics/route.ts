@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getSession } from '@/shared/guards/withSession'
+import { getValidatedSession as getSession } from '@/infrastructure/guards/withValidatedSession'
 import { errorResponse } from '@/shared/utils/apiResponse'
 import { di } from '@/infrastructure/di'
 import { AppError } from '@/shared/errors/AppError'

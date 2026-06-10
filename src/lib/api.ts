@@ -259,6 +259,7 @@ export type CreateAgentPayload = {
   operationalFunction: string
   description?: string
   systemPrompt: string
+  status?: 'ACTIVE' | 'DRAFT'
   directorId?: string | null
   mainChannel?: string | null
   toneOfVoice?: string | null

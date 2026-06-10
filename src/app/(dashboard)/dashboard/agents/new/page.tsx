@@ -491,7 +491,11 @@ export default function NewAgentPage() {
                 <Label className="text-sm text-muted-foreground font-medium">Crew</Label>
                 <Select value={form.crewId} onValueChange={(v) => set('crewId', v)}>
                   <SelectTrigger className="bg-input border-border h-10 rounded-lg">
-                    <SelectValue placeholder="Vincular a uma crew" />
+                    <SelectValue placeholder="Vincular a uma crew">
+                      {form.crewId && form.crewId !== 'sem-crew'
+                        ? (crews.find(c => c.id === form.crewId)?.name ?? form.crewId)
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="bg-card border-border">
                     <SelectItem value="sem-crew">Nenhum</SelectItem>
@@ -508,7 +512,11 @@ export default function NewAgentPage() {
                 <Label className="text-sm text-muted-foreground font-medium">Diretor responsável</Label>
                 <Select value={form.directorId} onValueChange={(v) => set('directorId', v)}>
                   <SelectTrigger className="bg-input border-border h-10 rounded-lg">
-                    <SelectValue placeholder="Diretor supervisor" />
+                    <SelectValue placeholder="Diretor supervisor">
+                      {form.directorId && form.directorId !== 'sem-diretor'
+                        ? (agents.find(a => a.id === form.directorId)?.name ?? form.directorId)
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="bg-card border-border">
                     <SelectItem value="sem-diretor">Nenhum</SelectItem>

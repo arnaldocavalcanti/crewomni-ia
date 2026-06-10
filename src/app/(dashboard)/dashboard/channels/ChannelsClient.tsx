@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Trash2, Mail, MessageCircle, AlertCircle, SendHorizontal, X, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
@@ -18,6 +18,19 @@ type Channel = {
 export function ChannelsClient({ initialChannels }: { initialChannels: Channel[] }) {
   const [channels, setChannels] = useState<Channel[]>(initialChannels)
   const [isAdding, setIsAdding] = useState<ChannelProvider | null>(null)
+
+  useEffect(() => {
+    setChannels(initialChannels)
+  }, [initialChannels])
+
+  const refreshChannels = useCallback(async () => {
+    try {
+      const data = await api.channels.list()
+      setChannels(data)
+    } catch {
+      // keep current state if refresh fails
+    }
+  }, [])
 
   // WhatsApp Form
   const [phoneNumberId, setPhoneNumberId] = useState('')
@@ -43,7 +56,7 @@ export function ChannelsClient({ initialChannels }: { initialChannels: Channel[]
     setLoading(true)
     try {
       await api.channels.delete(id)
-      setChannels(channels.filter(c => c.id !== id))
+      await refreshChannels()
     } catch (err: any) {
       alert(err.message)
     } finally {
@@ -71,14 +84,13 @@ export function ChannelsClient({ initialChannels }: { initialChannels: Channel[]
     setError('')
     setLoading(true)
     try {
-      const data = await api.channels.create({
+      await api.channels.create({
         provider: 'WHATSAPP',
         phoneNumberId,
         accessToken,
         webhookSecret
       })
-      
-      setChannels([...channels, data])
+      await refreshChannels()
       setIsAdding(null)
       setPhoneNumberId(''); setAccessToken(''); setWebhookSecret('')
     } catch (err: any) {
@@ -93,14 +105,13 @@ export function ChannelsClient({ initialChannels }: { initialChannels: Channel[]
     setError('')
     setLoading(true)
     try {
-      const data = await api.channels.create({
+      await api.channels.create({
         provider: 'EMAIL',
         fromAddress,
         fromName,
         sendgridApiKey
       })
-      
-      setChannels([...channels, data])
+      await refreshChannels()
       setIsAdding(null)
       setFromAddress(''); setFromName(''); setSendgridApiKey('')
     } catch (err: any) {

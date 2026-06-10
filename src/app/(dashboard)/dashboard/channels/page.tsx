@@ -7,11 +7,13 @@ import { ChannelsClient } from './ChannelsClient'
 export default function ChannelsPage() {
   const [channels, setChannels] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
 
   useEffect(() => {
+    setFetchError(false)
     api.channels.list()
       .then(setChannels)
-      .catch(() => {})
+      .catch(() => setFetchError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -31,6 +33,10 @@ export default function ChannelsPage() {
           <div className="mx-auto max-w-4xl space-y-4">
             <div className="h-32 rounded-xl border border-border bg-secondary/30 animate-pulse" />
             <div className="h-32 rounded-xl border border-border bg-secondary/30 animate-pulse" />
+          </div>
+        ) : fetchError ? (
+          <div className="mx-auto max-w-4xl rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+            Não foi possível carregar os canais. Verifique as configurações do servidor e tente recarregar a página.
           </div>
         ) : (
           <ChannelsClient initialChannels={channels} />

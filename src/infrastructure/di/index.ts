@@ -65,6 +65,7 @@ import { RemoveAgentFromCrew } from '@/domains/crew/use-cases/RemoveAgentFromCre
 import { ListCrewMembers } from '@/domains/crew/use-cases/ListCrewMembers'
 import { GetCrewBySlug } from '@/domains/crew/use-cases/GetCrewBySlug'
 import { GetCrewMetrics } from '@/domains/crew/use-cases/GetCrewMetrics'
+import { SimulateCrewMessage } from '@/domains/crew/use-cases/SimulateCrewMessage'
 import { InMemoryCrewRepository } from '@/infrastructure/db/repositories/InMemoryCrewRepository'
 import { InMemoryCrewMemberRepository } from '@/infrastructure/db/repositories/InMemoryCrewMemberRepository'
 import { PrismaCrewRepository } from '@/infrastructure/db/repositories/PrismaCrewRepository'
@@ -287,6 +288,7 @@ export const di = {
   removeAgentFromCrew: new RemoveAgentFromCrew(crewMemberRepo, auditLogger),
   listCrewMembers:     new ListCrewMembers(crewRepo, crewMemberRepo),
   getCrewMetrics:      new GetCrewMetrics(crewRepo, conversationRepo, auditLogger),
+  simulateCrewMessage: null as unknown as SimulateCrewMessage,
   // Conversation
   listConversations:       new ListConversations(conversationRepo),
   getConversationMessages: new GetConversationMessages(conversationRepo),
@@ -342,6 +344,15 @@ di.sendMessage = new SendMessage(
   di.transferConversation,
   di.checkUsageLimit,
   di.recordUsage,
+)
+
+di.simulateCrewMessage = new SimulateCrewMessage(
+  crewRepo,
+  crewMemberRepo,
+  agentRepo,
+  di.sendMessage,
+  lifecycleRepo,
+  channelConfigRepo,
 )
 
 di.orchestrateInboundMessage = new OrchestrateInboundMessage(

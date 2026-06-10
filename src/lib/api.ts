@@ -1,6 +1,7 @@
 'use client'
 
 import { getAccessToken, setAccessToken, clearAccessToken } from './auth'
+import type { TestSessionResult } from '@/domains/crew/entities/TestSessionResult'
 
 const BASE = '/api/v1'
 
@@ -173,6 +174,8 @@ export const api = {
       request<void>(`/crews/${id}`, { method: 'DELETE' }),
     getMetrics: (id: string) =>
       request<CrewMetricsOutput>(`/crews/${id}/metrics`),
+    simulate: (id: string, data: { message: string; mode: 'SIMULATE' | 'WHATSAPP_REAL'; toPhone?: string }) =>
+      request<TestSessionResult>(`/crews/${id}/simulate`, { method: 'POST', body: JSON.stringify(data) }),
     addMember: (crewId: string, data: { agentId: string; role: 'DIRECTOR' | 'MEMBER' | 'OBSERVER'; order: number; isRequired?: boolean }) =>
       request<any>(`/crews/${crewId}/members`, { method: 'POST', body: JSON.stringify(data) }),
   },

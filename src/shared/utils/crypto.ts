@@ -8,7 +8,6 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'crypto'
 
 const ALGORITHM = 'aes-256-gcm'
 const IV_LENGTH = 12    // 96-bit IV recommended for GCM
-const TAG_LENGTH = 16   // 128-bit auth tag
 
 function getKey(): Buffer {
   const hex = process.env.ENCRYPTION_KEY
@@ -69,9 +68,19 @@ export function encryptIfPresent(value: string | null | undefined): string | nul
 
 /**
  * Decrypts a value only if it is non-null/non-empty.
- * Returns null if input is null/undefined/empty.
+ * Returns null if the value is absent or cannot be decrypted (e.g. stored before
+ * encryption was added — format is not iv:authTag:ciphertext).
  */
 export function decryptIfPresent(value: string | null | undefined): string | null {
   if (!value) return null
-  return decrypt(value)
+  const parts = value.split(':')
+  if (parts.length !== 3) {
+    // Value is not in encrypted format — treat as unreadable (credential must be re-saved)
+    return null
+  }
+  try {
+    return decrypt(value)
+  } catch {
+    return null
+  }
 }

@@ -45,6 +45,7 @@ export class PrismaAgentRepository implements IAgentRepository {
         description: data.description ?? null,
         status: AS.DRAFT,
 
+        departmentId: data.departmentId ?? null,
         directorId: data.directorId ?? null,
         mainChannel: data.mainChannel ?? null,
         toneOfVoice: data.toneOfVoice ?? null,
@@ -83,6 +84,7 @@ export class PrismaAgentRepository implements IAgentRepository {
         ...(data.roleId !== undefined && { roleId: data.roleId }),
         ...(data.operationalFunction !== undefined && { operationalFunction: data.operationalFunction }),
         ...(data.status !== undefined && { status: data.status }),
+        ...(data.departmentId !== undefined && { departmentId: data.departmentId }),
         ...(data.directorId !== undefined && { directorId: data.directorId }),
         ...(data.mainChannel !== undefined && { mainChannel: data.mainChannel }),
         ...(data.toneOfVoice !== undefined && { toneOfVoice: data.toneOfVoice }),
@@ -120,6 +122,7 @@ export class PrismaAgentRepository implements IAgentRepository {
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
 
+      departmentId: r.departmentId,
       directorId: r.directorId,
       mainChannel: r.mainChannel,
       toneOfVoice: r.toneOfVoice,

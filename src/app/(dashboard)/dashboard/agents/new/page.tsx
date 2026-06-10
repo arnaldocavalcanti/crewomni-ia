@@ -214,7 +214,8 @@ export default function NewAgentPage() {
         description: form.description.trim() || undefined,
         systemPrompt: form.systemPrompt,
         
-        directorId: form.directorId || null,
+        departmentId: form.departmentId && form.departmentId !== 'sem-departamento' ? form.departmentId : null,
+        directorId: form.directorId && form.directorId !== 'sem-diretor' ? form.directorId : null,
         mainChannel: form.mainChannel,
         toneOfVoice: form.toneOfVoice,
         communicationStyle: form.communicationStyle,

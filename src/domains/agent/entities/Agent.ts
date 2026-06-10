@@ -28,6 +28,7 @@ export type Agent = {
   updatedAt: Date
 
   // Contexto Organizacional & Responsável
+  departmentId: string | null
   directorId: string | null
   mainChannel: string | null
 
@@ -60,6 +61,7 @@ export type UpdateAgentData = {
   roleId?: string
   operationalFunction?: string
   status?: AgentStatus
+  departmentId?: string | null
   directorId?: string | null
   mainChannel?: string | null
   toneOfVoice?: string | null
@@ -88,6 +90,7 @@ export type CreateAgentData = {
   roleId: string
   operationalFunction: string
   description?: string
+  departmentId?: string
   directorId?: string
   mainChannel?: string
   toneOfVoice?: string

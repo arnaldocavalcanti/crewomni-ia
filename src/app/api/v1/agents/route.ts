@@ -15,6 +15,7 @@ const createSchema = z.object({
   description: z.string().max(500).optional().nullable(),
   systemPrompt: z.string().min(10),
 
+  departmentId: z.string().uuid().optional().nullable(),
   directorId: z.string().uuid().optional().nullable(),
   mainChannel: z.string().max(100).optional().nullable(),
   toneOfVoice: z.string().max(200).optional().nullable(),
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
       slug: generateSlug(parsed.data.name),
       ...parsed.data,
       description: parsed.data.description ?? undefined,
+      departmentId: parsed.data.departmentId ?? undefined,
       directorId: parsed.data.directorId ?? undefined,
       mainChannel: parsed.data.mainChannel ?? undefined,
       toneOfVoice: parsed.data.toneOfVoice ?? undefined,

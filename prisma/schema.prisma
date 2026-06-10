@@ -178,6 +178,7 @@ model Agent {
   updatedAt           DateTime    @updatedAt
 
   // Contexto Organizacional & Responsável
+  departmentId        String?
   directorId          String?
   mainChannel         String?
 
@@ -204,6 +205,7 @@ model Agent {
 
   // Relações
   tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department      Department?          @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   promptVersions  AgentPromptVersion[]
   conversations   Conversation[]
   crewMemberships CrewMember[]
@@ -215,6 +217,7 @@ model Agent {
   @@unique([tenantId, slug])
   @@index([tenantId])
   @@index([roleId])
+  @@index([departmentId])
   @@map("agents")
 }
 
@@ -385,6 +388,7 @@ model Department {
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   crews  Crew[]
+  agents Agent[]
 
   @@unique([tenantId, name])
   @@unique([tenantId, slug])

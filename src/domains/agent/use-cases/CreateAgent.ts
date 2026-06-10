@@ -26,6 +26,7 @@ type CreateAgentInput = {
   requestedByRole: UserRole
 
   // Contexto Organizacional & Responsável
+  departmentId?: string
   directorId?: string
   mainChannel?: string
 
@@ -106,6 +107,7 @@ export class CreateAgent {
       operationalFunction: input.operationalFunction,
       description: input.description,
 
+      departmentId: input.departmentId,
       directorId: input.directorId,
       mainChannel: input.mainChannel,
       toneOfVoice: input.toneOfVoice,

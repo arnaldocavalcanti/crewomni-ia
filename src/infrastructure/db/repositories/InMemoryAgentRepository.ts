@@ -48,6 +48,7 @@ export class InMemoryAgentRepository implements IAgentRepository {
       createdAt: new Date(),
       updatedAt: new Date(),
 
+      departmentId: data.departmentId ?? null,
       directorId: data.directorId ?? null,
       mainChannel: data.mainChannel ?? null,
       toneOfVoice: data.toneOfVoice ?? null,

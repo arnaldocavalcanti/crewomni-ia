@@ -233,6 +233,7 @@ export type AgentListItem = {
 export type AgentDetail = AgentListItem & {
   activePromptVersion: { id: string; systemPrompt: string; version: number; status: string } | null
   crewMembership: { id: string; crewId: string; role: string } | null
+  departmentId: string | null
   directorId: string | null
   mainChannel: string | null
   toneOfVoice: string | null
@@ -260,6 +261,7 @@ export type CreateAgentPayload = {
   description?: string
   systemPrompt: string
   status?: 'ACTIVE' | 'DRAFT'
+  departmentId?: string | null
   directorId?: string | null
   mainChannel?: string | null
   toneOfVoice?: string | null

@@ -37,7 +37,7 @@ export class SimulateCrewMessage {
     }
 
     if (input.mode === 'WHATSAPP_REAL') {
-      const channels = await this.channelConfigRepo.findByTenantId(input.tenantId)
+      const channels = (await this.channelConfigRepo.findByTenantId(input.tenantId)) ?? []
       const waChannel = channels.find((c) => c.provider === 'WHATSAPP')
       if (!waChannel) {
         throw new AppError('WHATSAPP_CHANNEL_NOT_CONFIGURED', 'Nenhum canal WhatsApp configurado para este tenant')
@@ -60,7 +60,9 @@ export class SimulateCrewMessage {
       members.map((m) => this.agentRepo.findById(m.agentId, input.tenantId))
     )
     const agentMap = new Map(
-      agentDetails.filter(Boolean).map((a) => [a!.id, a!])
+      agentDetails
+        .filter((a): a is NonNullable<typeof a> => a !== null)
+        .map((a) => [a.id, a])
     )
 
     const lifecycleEvents = await this.lifecycleRepo.findByConversationId(
@@ -108,9 +110,11 @@ export class SimulateCrewMessage {
       })
     }
 
-    if (flowPath.length > 0) {
-      flowPath[flowPath.length - 1].action = 'RESPONDED'
-      flowPath[flowPath.length - 1].responseSnippet = result.reply.slice(0, 120)
+    // Update last agent in flowPath to RESPONDED
+    const lastIdx = flowPath.length - 1
+    if (lastIdx >= 0) {
+      flowPath[lastIdx].action = 'RESPONDED'
+      flowPath[lastIdx].responseSnippet = result.reply.slice(0, 120)
     }
 
     const inputTokens = Math.floor((result.tokensUsed ?? 0) * 0.8)

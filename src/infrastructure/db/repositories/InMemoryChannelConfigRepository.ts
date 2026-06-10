@@ -47,13 +47,15 @@ export class InMemoryChannelConfigRepository implements IChannelConfigRepository
     return [...this.store.values()].find(c => c.fromAddress === fromAddress) ?? null
   }
 
-  async existsByProviderAndIdentifier({ provider, phoneNumberId, fromAddress }: {
+  async existsByProviderAndIdentifier({ provider, phoneNumberId, fromAddress, excludeTenantId }: {
     provider: string
     phoneNumberId?: string | null
     fromAddress?: string | null
+    excludeTenantId?: string
   }): Promise<boolean> {
     return [...this.store.values()].some(c => {
       if (c.provider !== provider) return false
+      if (excludeTenantId && c.tenantId === excludeTenantId) return false
       if (phoneNumberId && c.phoneNumberId === phoneNumberId) return true
       if (fromAddress && c.fromAddress === fromAddress) return true
       return false

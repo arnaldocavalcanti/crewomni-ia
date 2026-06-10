@@ -33,16 +33,18 @@ export class CreateChannelConfig {
       throw new AppError('EMAIL_FROM_ADDRESS_REQUIRED', 'fromAddress é obrigatório para canal E-mail')
     }
 
-    // Check uniqueness — no two tenants can share the same phoneNumberId or fromAddress
+    // Check uniqueness — no two DIFFERENT tenants can share the same phoneNumberId or fromAddress.
+    // The current tenant is excluded so re-saving (upsert) is always allowed.
     const exists = await this.repo.existsByProviderAndIdentifier({
       provider,
       phoneNumberId: input.phoneNumberId,
       fromAddress: input.fromAddress,
+      excludeTenantId: tenantId,
     })
     if (exists) {
       throw new AppError(
         'CHANNEL_ALREADY_EXISTS',
-        `Já existe um canal ${provider} com este identificador`
+        `Já existe um canal ${provider} com este identificador em outro tenant`
       )
     }
 

@@ -10,6 +10,7 @@ export interface IChannelConfigRepository {
     provider: string
     phoneNumberId?: string | null
     fromAddress?: string | null
+    excludeTenantId?: string
   }): Promise<boolean>
   delete(params: { id: string; tenantId: string }): Promise<void>
 }

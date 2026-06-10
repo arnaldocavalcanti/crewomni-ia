@@ -108,20 +108,29 @@ export class PrismaChannelConfigRepository implements IChannelConfigRepository {
     return config ? this.mapToDomain(config) : null
   }
 
-  async existsByProviderAndIdentifier({ provider, phoneNumberId, fromAddress }: {
+  async existsByProviderAndIdentifier({ provider, phoneNumberId, fromAddress, excludeTenantId }: {
     provider: string
     phoneNumberId?: string | null
     fromAddress?: string | null
+    excludeTenantId?: string
   }): Promise<boolean> {
     if (provider === 'WHATSAPP' && phoneNumberId) {
       const count = await this.db.channelConfig.count({
-        where: { provider, phoneNumberId },
+        where: {
+          provider,
+          phoneNumberId,
+          ...(excludeTenantId ? { tenantId: { not: excludeTenantId } } : {}),
+        },
       })
       return count > 0
     }
     if (provider === 'EMAIL' && fromAddress) {
       const count = await this.db.channelConfig.count({
-        where: { provider, fromAddress },
+        where: {
+          provider,
+          fromAddress,
+          ...(excludeTenantId ? { tenantId: { not: excludeTenantId } } : {}),
+        },
       })
       return count > 0
     }

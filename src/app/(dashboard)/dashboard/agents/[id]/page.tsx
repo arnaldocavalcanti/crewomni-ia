@@ -632,7 +632,11 @@ export default function AgentEditPage() {
                   <Label className="text-sm text-muted-foreground font-medium">Crew</Label>
                   <Select value={form.crewId} onValueChange={v => set('crewId', v)}>
                     <SelectTrigger className="bg-input border-border h-10 rounded-lg">
-                      <SelectValue placeholder="Vincular a uma crew" />
+                      <SelectValue placeholder="Vincular a uma crew">
+                        {form.crewId && form.crewId !== 'sem-crew'
+                          ? (crews.find(c => c.id === form.crewId)?.name ?? form.crewId)
+                          : undefined}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
                       <SelectItem value="sem-crew">Nenhum</SelectItem>

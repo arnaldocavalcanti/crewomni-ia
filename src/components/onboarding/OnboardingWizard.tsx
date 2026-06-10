@@ -24,7 +24,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-foreground/20 backdrop-blur-sm p-4">
       <div className="w-full max-w-md bg-card rounded-2xl shadow-xl border border-border overflow-hidden">
         {/* Progress bar */}
         <div className="h-1 bg-border">

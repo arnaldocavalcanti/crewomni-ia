@@ -18,6 +18,6 @@ export class GetAgentBySlug {
     if (!agent) return null
 
     const activePromptVersion = await this.promptRepo.findActiveByAgent(agent.id, input.tenantId)
-    return { ...agent, activePromptVersion }
+    return { ...agent, activePromptVersion, crewMembership: null }
   }
 }

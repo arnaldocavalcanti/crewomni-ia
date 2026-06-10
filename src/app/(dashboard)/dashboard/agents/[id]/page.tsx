@@ -176,7 +176,7 @@ export default function AgentEditPage() {
           operationalFunction: agentData.operationalFunction,
           status: agentData.status,
           departmentId: '',
-          crewId: '',
+          crewId: agentData.crewMembership?.crewId ?? '',
           directorId: agentData.directorId ?? '',
           mainChannel: agentData.mainChannel ?? 'WhatsApp + E-mail',
           toneOfVoice: agentData.toneOfVoice ?? 'Profissional e consultivo',
@@ -292,6 +292,20 @@ export default function AgentEditPage() {
       // Publish system prompt if changed
       if (form.systemPrompt.trim().length >= 10) {
         await api.agents.publishPrompt(id, form.systemPrompt)
+      }
+
+      // Handle crew membership change
+      const oldMembership = agent?.crewMembership ?? null
+      const newCrewId = form.crewId && form.crewId !== 'sem-crew' ? form.crewId : null
+      const oldCrewId = oldMembership?.crewId ?? null
+
+      if (oldCrewId !== newCrewId) {
+        if (oldMembership) {
+          await api.crews.removeMember(oldCrewId!, oldMembership.id).catch(() => {})
+        }
+        if (newCrewId) {
+          await api.crews.addMember(newCrewId, { agentId: id, role: 'MEMBER', order: 0 })
+        }
       }
 
       router.push('/dashboard/agents')
@@ -579,7 +593,9 @@ export default function AgentEditPage() {
                   <div className="space-y-1.5">
                     <Label className="text-sm text-muted-foreground font-medium">Status *</Label>
                     <Select value={form.status} onValueChange={v => set('status', v)}>
-                      <SelectTrigger className="bg-input border-border h-10 rounded-lg"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="bg-input border-border h-10 rounded-lg">
+                        <SelectValue>{form.status === 'ACTIVE' ? 'Ativo' : 'Rascunho'}</SelectValue>
+                      </SelectTrigger>
                       <SelectContent className="bg-card border-border">
                         <SelectItem value="ACTIVE">Ativo</SelectItem>
                         <SelectItem value="DRAFT">Rascunho</SelectItem>

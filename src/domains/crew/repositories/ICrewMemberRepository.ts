@@ -5,6 +5,7 @@ export interface ICrewMemberRepository {
   findById(id: string, tenantId: string): Promise<CrewMember | null>
   findByCrewAndAgent(crewId: string, agentId: string, tenantId: string): Promise<CrewMember | null>
   findAllByCrew(crewId: string, tenantId: string): Promise<CrewMember[]>
+  findFirstByAgent(agentId: string, tenantId: string): Promise<CrewMember | null>
   findDirector(crewId: string, tenantId: string): Promise<CrewMember | null>
   countDirectors(crewId: string, tenantId: string): Promise<number>
   countByCrew(crewId: string, tenantId: string): Promise<number>

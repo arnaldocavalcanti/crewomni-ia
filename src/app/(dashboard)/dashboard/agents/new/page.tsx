@@ -448,7 +448,7 @@ export default function NewAgentPage() {
                   <Label className="text-sm text-muted-foreground font-medium">Status *</Label>
                   <Select value={form.status} onValueChange={(v) => set('status', v)}>
                     <SelectTrigger className="bg-input border-border h-10 rounded-lg">
-                      <SelectValue />
+                      <SelectValue>{form.status === 'ACTIVE' ? 'Ativo' : 'Rascunho'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
                       <SelectItem value="ACTIVE">Ativo</SelectItem>

@@ -1,5 +1,6 @@
 import type { IAgentRepository } from '../repositories/IAgentRepository'
 import type { IAgentPromptVersionRepository } from '../repositories/IAgentPromptVersionRepository'
+import type { ICrewMemberRepository } from '@/domains/crew/repositories/ICrewMemberRepository'
 import type { Agent } from '../entities/Agent'
 import type { AgentPromptVersion } from '../entities/AgentPromptVersion'
 
@@ -10,12 +11,14 @@ type GetAgentInput = {
 
 export type AgentWithPrompt = Agent & {
   activePromptVersion: AgentPromptVersion | null
+  crewMembership: { id: string; crewId: string; role: string } | null
 }
 
 export class GetAgent {
   constructor(
     private agentRepo: IAgentRepository,
     private promptRepo: IAgentPromptVersionRepository,
+    private crewMemberRepo: ICrewMemberRepository,
   ) {}
 
   async execute(input: GetAgentInput): Promise<AgentWithPrompt | null> {
@@ -26,6 +29,11 @@ export class GetAgent {
       (await this.promptRepo.findActiveByAgent(input.agentId, input.tenantId)) ??
       (await this.promptRepo.findLatestByAgent(input.agentId, input.tenantId))
 
-    return { ...agent, activePromptVersion }
+    const membership = await this.crewMemberRepo.findFirstByAgent(input.agentId, input.tenantId)
+    const crewMembership = membership
+      ? { id: membership.id, crewId: membership.crewId, role: membership.role }
+      : null
+
+    return { ...agent, activePromptVersion, crewMembership }
   }
 }

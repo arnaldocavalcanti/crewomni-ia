@@ -32,6 +32,12 @@ export class InMemoryCrewMemberRepository implements ICrewMemberRepository {
     ) ?? null
   }
 
+  async findFirstByAgent(agentId: string, tenantId: string): Promise<CrewMember | null> {
+    return Array.from(store.values()).find(
+      (m) => m.agentId === agentId && m.tenantId === tenantId,
+    ) ?? null
+  }
+
   async findAllByCrew(crewId: string, tenantId: string): Promise<CrewMember[]> {
     return Array.from(store.values())
       .filter((m) => m.crewId === crewId && m.tenantId === tenantId)

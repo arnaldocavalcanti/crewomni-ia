@@ -26,6 +26,11 @@ export class PrismaCrewMemberRepository implements ICrewMemberRepository {
     return r ? this.toEntity(r) : null
   }
 
+  async findFirstByAgent(agentId: string, tenantId: string): Promise<CrewMember | null> {
+    const r = await this.db.crewMember.findFirst({ where: { agentId, tenantId } })
+    return r ? this.toEntity(r) : null
+  }
+
   async findAllByCrew(crewId: string, tenantId: string): Promise<CrewMember[]> {
     const records = await this.db.crewMember.findMany({
       where: { crewId, tenantId }, orderBy: { order: 'asc' },

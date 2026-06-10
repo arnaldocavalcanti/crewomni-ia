@@ -178,6 +178,8 @@ export const api = {
       request<TestSessionResult>(`/crews/${id}/simulate`, { method: 'POST', body: JSON.stringify(data) }),
     addMember: (crewId: string, data: { agentId: string; role: 'DIRECTOR' | 'MEMBER' | 'OBSERVER'; order: number; isRequired?: boolean }) =>
       request<any>(`/crews/${crewId}/members`, { method: 'POST', body: JSON.stringify(data) }),
+    removeMember: (crewId: string, memberId: string) =>
+      request<void>(`/crews/${crewId}/members/${memberId}`, { method: 'DELETE' }),
   },
 
   // ─── Channels ──────────────────────────────────────────────────────────────
@@ -230,7 +232,7 @@ export type AgentListItem = {
 
 export type AgentDetail = AgentListItem & {
   activePromptVersion: { id: string; systemPrompt: string; version: number; status: string } | null
-  // Extended fields
+  crewMembership: { id: string; crewId: string; role: string } | null
   directorId: string | null
   mainChannel: string | null
   toneOfVoice: string | null

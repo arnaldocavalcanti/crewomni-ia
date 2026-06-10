@@ -81,7 +81,8 @@ function makePromptRepo(): IAgentPromptVersionRepository {
 describe('Agent Isolation', () => {
   const agentRepo = makeAgentRepo()
   const promptRepo = makePromptRepo()
-  const getAgent = new GetAgent(agentRepo, promptRepo)
+  const crewMemberRepo = { findFirstByAgent: vi.fn().mockResolvedValue(null) } as any
+  const getAgent = new GetAgent(agentRepo, promptRepo, crewMemberRepo)
   const listAgents = new ListAgents(agentRepo, promptRepo)
 
   // ── GetAgent: tenant A não acessa agente de tenant B ─────────────────────

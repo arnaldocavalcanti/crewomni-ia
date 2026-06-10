@@ -260,7 +260,7 @@ export const di = {
   createAgentRole:   new CreateAgentRole(agentRoleRepo, auditLogger),
   listAgentRoles:    new ListAgentRoles(agentRoleRepo),
   publishAgentPrompt: new PublishAgentPrompt(agentRepo, promptRepo, auditLogger),
-  getAgent:          new GetAgent(agentRepo, promptRepo),
+  getAgent:          new GetAgent(agentRepo, promptRepo, crewMemberRepo),
   getAgentBySlug:    new GetAgentBySlug(agentRepo, promptRepo),
   listAgents:        new ListAgents(agentRepo, promptRepo),
   updateAgentStatus: new UpdateAgentStatus(agentRepo, auditLogger),

@@ -4,6 +4,7 @@ import { ListAgents } from '@/domains/agent/use-cases/ListAgents'
 import { UpdateAgentStatus } from '@/domains/agent/use-cases/UpdateAgentStatus'
 import type { IAgentRepository } from '@/domains/agent/repositories/IAgentRepository'
 import type { IAgentPromptVersionRepository } from '@/domains/agent/repositories/IAgentPromptVersionRepository'
+import type { ICrewMemberRepository } from '@/domains/crew/repositories/ICrewMemberRepository'
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import { AgentStatus, AgentType } from '@/domains/agent/entities/Agent'
 import { PromptVersionStatus } from '@/domains/agent/entities/AgentPromptVersion'
@@ -54,7 +55,18 @@ function makeRepos() {
     supersedePrevious: vi.fn(),
   }
   const auditLogger: IAuditLogger = { log: vi.fn() }
-  return { agentRepo, promptRepo, auditLogger }
+  const crewMemberRepo: ICrewMemberRepository = {
+    create: vi.fn(),
+    findById: vi.fn(),
+    findByCrewAndAgent: vi.fn(),
+    findAllByCrew: vi.fn(),
+    findFirstByAgent: vi.fn().mockResolvedValue(null),
+    findDirector: vi.fn(),
+    countDirectors: vi.fn(),
+    countByCrew: vi.fn(),
+    delete: vi.fn(),
+  }
+  return { agentRepo, promptRepo, auditLogger, crewMemberRepo }
 }
 
 // ─── GetAgent ─────────────────────────────────────────────────────────────────
@@ -68,7 +80,7 @@ describe('GetAgent', () => {
     const repos = makeRepos()
     agentRepo = repos.agentRepo
     promptRepo = repos.promptRepo
-    useCase = new GetAgent(agentRepo, promptRepo)
+    useCase = new GetAgent(agentRepo, promptRepo, repos.crewMemberRepo)
   })
 
   it('deve retornar agente com versão de prompt ativa', async () => {

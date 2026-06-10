@@ -262,7 +262,7 @@ export const di = {
   publishAgentPrompt: new PublishAgentPrompt(agentRepo, promptRepo, auditLogger),
   getAgent:          new GetAgent(agentRepo, promptRepo, crewMemberRepo),
   getAgentBySlug:    new GetAgentBySlug(agentRepo, promptRepo),
-  listAgents:        new ListAgents(agentRepo, promptRepo),
+  listAgents:        new ListAgents(agentRepo, promptRepo, agentRoleRepo),
   updateAgentStatus: new UpdateAgentStatus(agentRepo, auditLogger),
   updateAgent:       new UpdateAgent(agentRepo, auditLogger),
   // Knowledge

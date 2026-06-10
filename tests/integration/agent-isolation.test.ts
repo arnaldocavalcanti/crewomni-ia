@@ -3,6 +3,7 @@ import { GetAgent } from '@/domains/agent/use-cases/GetAgent'
 import { ListAgents } from '@/domains/agent/use-cases/ListAgents'
 import type { IAgentRepository } from '@/domains/agent/repositories/IAgentRepository'
 import type { IAgentPromptVersionRepository } from '@/domains/agent/repositories/IAgentPromptVersionRepository'
+import type { IAgentRoleRepository } from '@/domains/agent/repositories/IAgentRoleRepository'
 import { AgentStatus, AgentType } from '@/domains/agent/entities/Agent'
 import { PromptVersionStatus } from '@/domains/agent/entities/AgentPromptVersion'
 
@@ -78,12 +79,22 @@ function makePromptRepo(): IAgentPromptVersionRepository {
   }
 }
 
+function makeRoleRepo(): IAgentRoleRepository {
+  return {
+    findById: vi.fn(),
+    findByName: vi.fn(),
+    list: vi.fn().mockResolvedValue([]),
+    create: vi.fn(),
+  }
+}
+
 describe('Agent Isolation', () => {
   const agentRepo = makeAgentRepo()
   const promptRepo = makePromptRepo()
+  const roleRepo = makeRoleRepo()
   const crewMemberRepo = { findFirstByAgent: vi.fn().mockResolvedValue(null) } as any
   const getAgent = new GetAgent(agentRepo, promptRepo, crewMemberRepo)
-  const listAgents = new ListAgents(agentRepo, promptRepo)
+  const listAgents = new ListAgents(agentRepo, promptRepo, roleRepo)
 
   // ── GetAgent: tenant A não acessa agente de tenant B ─────────────────────
 

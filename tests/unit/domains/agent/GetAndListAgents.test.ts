@@ -4,6 +4,7 @@ import { ListAgents } from '@/domains/agent/use-cases/ListAgents'
 import { UpdateAgentStatus } from '@/domains/agent/use-cases/UpdateAgentStatus'
 import type { IAgentRepository } from '@/domains/agent/repositories/IAgentRepository'
 import type { IAgentPromptVersionRepository } from '@/domains/agent/repositories/IAgentPromptVersionRepository'
+import type { IAgentRoleRepository } from '@/domains/agent/repositories/IAgentRoleRepository'
 import type { ICrewMemberRepository } from '@/domains/crew/repositories/ICrewMemberRepository'
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import { AgentStatus, AgentType } from '@/domains/agent/entities/Agent'
@@ -17,6 +18,7 @@ function makeAgent(overrides = {}) {
     name: 'SDR Devolus',
     slug: 'sdr-devolus',
     type: AgentType.SDR,
+    roleId: 'role-1',
     description: null,
     status: AgentStatus.ACTIVE,
     createdAt: new Date(),
@@ -43,7 +45,7 @@ function makeRepos() {
     findByName: vi.fn(),
     findBySlug: vi.fn(),
     countActive: vi.fn(),
-    listByTenant: vi.fn().mockResolvedValue([makeAgent(), makeAgent({ id: 'agent-2', name: 'Helpdesk' })]),
+    listByTenant: vi.fn().mockResolvedValue([makeAgent(), makeAgent({ id: 'agent-2', name: 'Helpdesk', roleId: 'role-2' })]),
     create: vi.fn(),
     updateStatus: vi.fn(), update: vi.fn(),
   }
@@ -53,6 +55,15 @@ function makeRepos() {
     getLatestVersion: vi.fn(),
     create: vi.fn(),
     supersedePrevious: vi.fn(),
+  }
+  const roleRepo: IAgentRoleRepository = {
+    findById: vi.fn(),
+    findByName: vi.fn(),
+    list: vi.fn().mockResolvedValue([
+      { id: 'role-1', name: 'Role 1', tenantId: 'tenant-1', category: 'Sales', createdAt: new Date(), updatedAt: new Date() },
+      { id: 'role-2', name: 'Role 2', tenantId: 'tenant-1', category: 'Support', createdAt: new Date(), updatedAt: new Date() }
+    ]),
+    create: vi.fn(),
   }
   const auditLogger: IAuditLogger = { log: vi.fn() }
   const crewMemberRepo: ICrewMemberRepository = {
@@ -66,7 +77,7 @@ function makeRepos() {
     countByCrew: vi.fn(),
     delete: vi.fn(),
   }
-  return { agentRepo, promptRepo, auditLogger, crewMemberRepo }
+  return { agentRepo, promptRepo, roleRepo, auditLogger, crewMemberRepo }
 }
 
 // ─── GetAgent ─────────────────────────────────────────────────────────────────
@@ -115,12 +126,14 @@ describe('ListAgents', () => {
   let useCase: ListAgents
   let agentRepo: IAgentRepository
   let promptRepo: IAgentPromptVersionRepository
+  let roleRepo: IAgentRoleRepository
 
   beforeEach(() => {
     const repos = makeRepos()
     agentRepo = repos.agentRepo
     promptRepo = repos.promptRepo
-    useCase = new ListAgents(agentRepo, promptRepo)
+    roleRepo = repos.roleRepo
+    useCase = new ListAgents(agentRepo, promptRepo, roleRepo)
   })
 
   it('deve listar apenas agentes do tenant da sessão', async () => {
@@ -128,6 +141,8 @@ describe('ListAgents', () => {
 
     expect(agentRepo.listByTenant).toHaveBeenCalledWith('tenant-1')
     expect(result.length).toBe(2)
+    expect(result[0].roleName).toBe('Role 1')
+    expect(result[1].roleName).toBe('Role 2')
   })
 
   it('não deve incluir systemPrompt na listagem', async () => {

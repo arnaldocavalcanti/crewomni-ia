@@ -49,7 +49,7 @@ export default function AgentsPage() {
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-muted-foreground font-medium">Nome</TableHead>
-                <TableHead className="text-muted-foreground font-medium">Tipo</TableHead>
+                <TableHead className="text-muted-foreground font-medium">Papel</TableHead>
                 <TableHead className="text-muted-foreground font-medium">Status</TableHead>
                 <TableHead className="text-muted-foreground font-medium">Criado em</TableHead>
               </TableRow>
@@ -73,7 +73,12 @@ export default function AgentsPage() {
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm text-muted-foreground">{agent.type}</span>
+                    <span 
+                      className="text-sm text-muted-foreground truncate max-w-[180px] block"
+                      title={agent.roleName}
+                    >
+                      {agent.roleName}
+                    </span>
                   </TableCell>
                   <TableCell><StatusBadge status={agent.status} /></TableCell>
                   <TableCell>

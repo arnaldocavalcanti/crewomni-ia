@@ -228,6 +228,7 @@ export type AgentListItem = {
   type: string; description: string | null; status: string
   category: string; roleId: string; operationalFunction: string
   createdAt: string; updatedAt: string
+  roleName: string
 }
 
 export type AgentDetail = AgentListItem & {

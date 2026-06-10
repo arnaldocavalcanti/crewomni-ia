@@ -71,9 +71,9 @@ export class SimulateCrewMessage {
     )
 
     const handoffs: HandoffEntry[] = lifecycleEvents
-      .filter((e) => (e.metadata as any)?.type === 'TRANSFER')
+      .filter((e) => (e as any).metadata?.type === 'TRANSFER')
       .map((e) => {
-        const meta = e.metadata as any
+        const meta = (e as any).metadata
         const from = agentMap.get(meta.fromAgentId as string)
         const to = agentMap.get(meta.toAgentId as string)
         return {

@@ -1,0 +1,6 @@
+{"type":"server-started","port":54611,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:54611","screen_dir":"/Users/arnaldocavalcanti/Documents/Projects_AI/crewomni/crewomni-ia/.superpowers/brainstorm/9066-1781113481/content","state_dir":"/Users/arnaldocavalcanti/Documents/Projects_AI/crewomni/crewomni-ia/.superpowers/brainstorm/9066-1781113481/state"}
+{"type":"screen-added","file":"/Users/arnaldocavalcanti/Documents/Projects_AI/crewomni/crewomni-ia/.superpowers/brainstorm/9066-1781113481/content/approaches.html"}
+{"type":"screen-updated","file":"/Users/arnaldocavalcanti/Documents/Projects_AI/crewomni/crewomni-ia/.superpowers/brainstorm/9066-1781113481/content/approaches.html"}
+{"type":"screen-added","file":"/Users/arnaldocavalcanti/Documents/Projects_AI/crewomni/crewomni-ia/.superpowers/brainstorm/9066-1781113481/content/layout-testlab.html"}
+{"type":"screen-updated","file":"/Users/arnaldocavalcanti/Documents/Projects_AI/crewomni/crewomni-ia/.superpowers/brainstorm/9066-1781113481/content/layout-testlab.html"}
+{"type":"server-stopped","reason":"idle timeout"}

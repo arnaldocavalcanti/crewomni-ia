@@ -1,0 +1,47 @@
+<h2>Como integrar o Test Lab na Crew?</h2>
+<p class="subtitle">3 abordagens para o simulador de fluxo — escolha a que faz mais sentido para você</p>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Aba "Test Lab" na página de detalhe da Crew</h3>
+      <p>Dentro de <code>/dashboard/crews/:id</code>, uma nova aba ao lado das abas existentes. Layout 3 colunas: chat simulado | flow diagram | detail trace.</p>
+      <div class="pros-cons" style="margin-top:12px">
+        <div class="pros"><h4>Prós</h4><ul><li>Tela cheia — espaço para o flow diagram</li><li>Contexto da Crew sempre visível</li><li>URL compartilhável para investigar bugs</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Requer navegar até a crew primeiro</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Painel deslizante (Drawer) na listagem de Crews</h3>
+      <p>Botão "Testar" em cada crew card na listagem. Abre um drawer lateral sem sair da página de listagem. Layout 2 colunas: chat | trace/flow.</p>
+      <div class="pros-cons" style="margin-top:12px">
+        <div class="pros"><h4>Prós</h4><ul><li>Acesso rápido sem navegar</li><li>Pode testar múltiplas crews sem perder contexto</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Espaço limitado — flow diagram fica comprimido</li><li>Difícil mostrar trace completo de admin</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Página dedicada <code>/dashboard/crews/:id/test</code></h3>
+      <p>Rota separada, acessível pelo botão "Test Lab" na crew. Layout completo sem sidebar — tela máxima para o flow diagram + chat + trace.</p>
+      <div class="pros-cons" style="margin-top:12px">
+        <div class="pros"><h4>Prós</h4><ul><li>Mais espaço de tela possível</li><li>URL própria, fácil de bookmarkar</li><li>Pode exibir histórico de sessões de teste</li></ul></div>
+        <div class="cons"><h4>Contras</h4><ul><li>Sai da navegação principal — menos integrado</li><li>Mais rotas para manter</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:24px; padding:16px; background: rgba(79,110,247,0.08); border-radius:8px; border-left: 3px solid #4F6EF7">
+  <p class="label">Recomendação</p>
+  <p><strong>A — Aba na página de detalhe da Crew.</strong> A crew já tem detalhe (membros, configurações), a aba Test Lab fica naturalmente nesse contexto. Tela cheia garante espaço pro flow diagram e pro trace de admin. A URL <code>/crews/:id?tab=test</code> é compartilhável para investigar bugs específicos.</p>
+</div>

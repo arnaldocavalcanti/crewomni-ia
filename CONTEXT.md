@@ -424,6 +424,24 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 **API routes:**
 - `GET /api/v1/crews/:id/metrics` → `{ totalConversations, activeConversations, totalMessages, messagesByAgent[] }`
 
+### ✅ Crew Test Lab — Fase 1.7 (IMPLEMENTADO)
+**Objetivo:** Aba "🧪 Test Lab" na página de detalhe de Crew (`/dashboard/crews/:id`) para testar o fluxo multi-agente sem tocar produção.
+**Use-case:** `SimulateCrewMessage` — executa `SendMessage` com `crewId`, reconstrói handoffs e trace via `ConversationLifecycleEvent`, retorna `{ reply, agentId, agentName, handoffs[], traceEvents[] }`. Acessa `e.metadata` via `(e as any).metadata` (campo não tipado na entidade).
+**Infra:** wired no DI com post-init injection (`di.simulateCrewMessage = new SimulateCrewMessage(...)`) para evitar dependência circular.
+**API routes:**
+- `POST /api/v1/crews/:id/simulate` → `{ userMessage, conversationId? }` → `SimulationResult`
+**Componentes React:**
+- `CrewTestLab` — parent com estado de mensagens, modo (SIMULATE/WHATSAPP_REAL), handoffs, trace
+- `TestChatSimulator` — chat UI com textarea, send, modo toggle, campo phone para WhatsApp Real
+- `CrewFlowDiagram` — SVG com agentes conectados, highlights de handoffs visitados
+- `AgentTraceAccordion` — lista colapsável de trace events com badges de agente e tipo de evento
+**Relacionamento agente-crew (`crewMembership`):**
+- `ICrewMemberRepository.findFirstByAgent(agentId, tenantId)` adicionado
+- `GetAgent` retorna `crewMembership: { id, crewId, role } | null` (consulta `CrewMember` por agente)
+- `GetAgentBySlug` retorna `crewMembership: null` (slug-based lookup não precisa da crew)
+- Formulário de agente carrega `crewId` de `agent.crewMembership?.crewId` e salva via `removeMember`/`addMember` ao detectar mudança
+- `SelectValue` de status usa label explícito (`'Ativo'`/`'Rascunho'`) para evitar render raw do enum Radix UI
+
 ### ✅ Segurança & Proteção Operacional — Fase 2.1 (IMPLEMENTADO)
 **Objetivo:** Proteger isolamento multi-tenant via RLS e quotas de uso.
 **Inclui:**

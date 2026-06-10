@@ -8,9 +8,22 @@ import { InMemoryTenantUsageLimitRepository } from '@/infrastructure/db/reposito
 import { AppError } from '@/shared/errors/AppError'
 
 import { vi } from 'vitest'
+import { getPrismaClient } from '@/infrastructure/db/prisma/client'
 
 describe('Usage Limits Flow', () => {
   beforeEach(async () => {
+    // Clean up database tables for integration testing
+    const prisma = getPrismaClient()
+    await prisma.tenantUsageLimit.deleteMany()
+    await prisma.tenantUsageCurrent.deleteMany()
+    await prisma.conversationLifecycleEvent.deleteMany()
+    await prisma.message.deleteMany()
+    await prisma.conversation.deleteMany()
+    await prisma.agent.deleteMany()
+    await prisma.agentRole.deleteMany()
+    await prisma.user.deleteMany()
+    await prisma.tenant.deleteMany()
+
     // Mock LLM dependant calls to prevent JSON parse errors
     vi.spyOn(di.buildRAGContext, 'execute').mockResolvedValue({
       reply: 'Mocked reply',
@@ -43,7 +56,7 @@ describe('Usage Limits Flow', () => {
       password: 'password123',
     })
 
-    const tenantId = tenant.tenantId
+    const tenantId = tenant.tenant.id
 
     // 2. Set limits
     await di.updateUsageLimit.execute({

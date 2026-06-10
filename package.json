@@ -7,11 +7,11 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:unit": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration",
-    "test:coverage": "vitest run --coverage"
+    "test": "dotenv -e .env.test -- prisma migrate deploy && dotenv -e .env.test -- vitest run --fileParallelism=false",
+    "test:watch": "dotenv -e .env.test -- vitest --fileParallelism=false",
+    "test:unit": "dotenv -e .env.test -- vitest run tests/unit",
+    "test:integration": "dotenv -e .env.test -- prisma migrate deploy && dotenv -e .env.test -- vitest run tests/integration --fileParallelism=false",
+    "test:coverage": "dotenv -e .env.test -- prisma migrate deploy && dotenv -e .env.test -- vitest run --coverage --fileParallelism=false"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -50,6 +50,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.7",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",

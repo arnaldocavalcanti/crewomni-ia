@@ -8,6 +8,8 @@ import { getSession } from '@/shared/guards/withSession'
 import { di } from '@/infrastructure/di'
 import { ConversationStatus } from '@/domains/conversation/entities/Conversation'
 
+import { getPrismaClient } from '@/infrastructure/db/prisma/client'
+
 vi.mock('@/shared/guards/withSession', () => ({
   getSession: vi.fn(),
 }))
@@ -16,7 +18,7 @@ describe('Conversations Split-View API Routes', () => {
   const tenantId = 'tenant-A'
   const userId = 'operator-1'
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     // Mock getSession to return a valid session
     vi.mocked(getSession).mockResolvedValue({
@@ -24,6 +26,27 @@ describe('Conversations Split-View API Routes', () => {
       tenantId,
       role: 'TENANT_OPERATOR' as any,
       isPlatformAdmin: false,
+    })
+
+    const prisma = getPrismaClient()
+    await prisma.conversationLifecycleEvent.deleteMany()
+    await prisma.message.deleteMany()
+    await prisma.conversation.deleteMany()
+    await prisma.agent.deleteMany()
+    await prisma.agentRole.deleteMany()
+    await prisma.tenant.deleteMany()
+
+    await prisma.tenant.create({
+      data: { id: 'tenant-A', name: 'Tenant A', slug: 'tenant-a', plan: 'PRO', niche: 'SUPPORT' }
+    })
+    await prisma.tenant.create({
+      data: { id: 'tenant-B', name: 'Tenant B', slug: 'tenant-b', plan: 'PRO', niche: 'SUPPORT' }
+    })
+    await prisma.agentRole.create({
+      data: { id: 'role-1', name: 'Support', category: 'Customer Support' }
+    })
+    await prisma.agent.create({
+      data: { id: 'agent-1', tenantId: 'tenant-A', name: 'Agent 1', slug: 'agent-1', type: 'SUPPORT', roleId: 'role-1', category: 'Customer Support', operationalFunction: 'Suporte' }
     })
   })
 

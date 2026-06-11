@@ -203,6 +203,9 @@ model Agent {
   expectedExamples   String?
   specificRules      String?
 
+  // Qualificação de Leads
+  qualificationSchemaId String? // optional — links to QualificationSchema for this agent's niche
+
   // Relações
   tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   department      Department?          @relation(fields: [departmentId], references: [id], onDelete: SetNull)
@@ -473,15 +476,34 @@ model CrewWorkflow {
 
 // ─── Qualification ────────────────────────────────────────────────────────────
 
+model QualificationSchema {
+  id        String   @id @default(uuid())
+  tenantId  String?  // null = global (platform-level, read-only for tenants)
+  nicheKey  String
+  version   Int      @default(1)
+  fields    Json     @default("[]")  // FieldDef[]
+  order     Json     @default("[]")  // string[] — collection order
+  createdAt DateTime @default(now())
+
+  states QualificationState[]
+
+  @@unique([tenantId, nicheKey, version])
+  @@index([tenantId])
+  @@map("qualification_schemas")
+}
+
 model QualificationState {
   id             String   @id @default(uuid())
   conversationId String   @unique
   tenantId       String
   agentId        String
+  schemaId       String?  // nullable during backfill; links to QualificationSchema
   stage          String   @default("QUALIFYING")
   lastIntent     String?
   fields         Json     @default("{}")
   updatedAt      DateTime @updatedAt
+
+  schema QualificationSchema? @relation(fields: [schemaId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@map("qualification_states")

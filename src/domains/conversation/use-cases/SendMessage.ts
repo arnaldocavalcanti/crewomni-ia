@@ -5,7 +5,7 @@ import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import type { BuildRAGContext } from '@/domains/knowledge/use-cases/BuildRAGContext'
 import { ConversationStatus, MessageRole } from '../entities/Conversation'
 import type { IQualificationStateRepository } from '@/domains/qualification/repositories/IQualificationStateRepository'
-import type { ExtractAndUpdateState } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
+import type { ExtractAndUpdateState, ExtractAndUpdateStateOutput } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
 import type { ICrewMemberRepository } from '@/domains/crew/repositories/ICrewMemberRepository'
 import type { TransferConversation } from './TransferConversation'
 
@@ -158,11 +158,12 @@ export class SendMessage {
     let failed = false
 
     try {
-      qualState = await this.extractState.execute({
+      const extractOutput: ExtractAndUpdateStateOutput = await (this.extractState as any).execute({
         state: qualState,
         message: input.message.trim(),
         conversationHistory,
       })
+      qualState = extractOutput.newState
     } catch {
       // extraction failure is non-critical — proceed with stale state
     }

@@ -80,21 +80,17 @@ function makeQualState(overrides = {}) {
     conversationId: 'conv-1',
     tenantId: 'tenant-1',
     agentId: 'agent-1',
+    schemaId: null,
     stage: ConversationStage.QUALIFYING,
     lastIntent: null,
-    fields: {
-      tipo_empresa: null,
-      numero_colaboradores: null,
-      usa_crm: null,
-      nome_contato: null,
-      telefone: null,
-      email: null,
-      nivel_interesse: null,
-      objecao: null,
-    },
+    fields: {},
     updatedAt: new Date(),
     ...overrides,
   }
+}
+
+function makeExtractOutput(stateOverrides = {}) {
+  return { newState: makeQualState(stateOverrides), changedKeys: [], rejectedKeys: [] }
 }
 
 function makeQualStateRepo(): IQualificationStateRepository {
@@ -107,7 +103,7 @@ function makeQualStateRepo(): IQualificationStateRepository {
 
 function makeExtractState(): Pick<ExtractAndUpdateState, 'execute'> {
   return {
-    execute: vi.fn().mockResolvedValue(makeQualState()),
+    execute: vi.fn().mockResolvedValue(makeExtractOutput()),
   }
 }
 
@@ -333,39 +329,37 @@ describe('SendMessage', () => {
     expect(qualStateRepo.create).not.toHaveBeenCalled()
   })
 
-  it('deve passar qualificationState para o RAG context', async () => {
-    const state = makeQualState({ fields: { tipo_empresa: 'imobiliária' } })
-    vi.mocked(qualStateRepo.findByConversation).mockResolvedValue(state)
-    vi.mocked(extractState.execute).mockResolvedValue(state)
+  it('deve passar qualificationState atualizado pela extração para o RAG context', async () => {
+    const initialState = makeQualState()
+    const updatedState = makeQualState({ fields: { tipo_empresa: 'imobiliaria' } })
+    vi.mocked(qualStateRepo.findByConversation).mockResolvedValue(initialState)
+    vi.mocked(extractState.execute).mockResolvedValue(makeExtractOutput({ fields: { tipo_empresa: 'imobiliaria' } }))
 
     await useCase.execute(makeInput({ conversationId: 'conv-1' }))
 
     expect(ragContext.execute).toHaveBeenCalledWith(
-      expect.objectContaining({ qualificationState: state })
+      expect.objectContaining({ qualificationState: expect.objectContaining({ fields: updatedState.fields }) })
     )
   })
 
-  it('deve executar extração e RAG em paralelo (ambos iniciados antes de qualquer um resolver)', async () => {
+  it('deve executar extração ANTES do RAG (sequencial — estado fresco garantido)', async () => {
     const order: string[] = []
-    let resolveExtract!: (v: ReturnType<typeof makeQualState>) => void
-    let resolveRAG!: (v: { reply: string; model: string; tokensUsed: number; chunksUsed: never[] }) => void
 
-    vi.mocked(extractState.execute).mockImplementation(
-      () => new Promise((res) => { order.push('extract-started'); resolveExtract = res }),
-    )
-    vi.mocked(ragContext.execute).mockImplementation(
-      () => new Promise((res) => { order.push('rag-started'); resolveRAG = res }),
-    )
+    vi.mocked(extractState.execute).mockImplementation(async () => {
+      order.push('extract-started')
+      return makeQualState()
+    })
+    vi.mocked(ragContext.execute).mockImplementation(async () => {
+      order.push('rag-started')
+      return { reply: 'ok', model: 'gpt-4o', tokensUsed: 10, chunksUsed: [] }
+    })
 
-    const promise = useCase.execute(makeInput({ conversationId: 'conv-1' }))
-    await new Promise((res) => setImmediate(res))
+    await useCase.execute(makeInput({ conversationId: 'conv-1' }))
 
-    expect(order).toContain('extract-started')
-    expect(order).toContain('rag-started')
-
-    resolveExtract(makeQualState())
-    resolveRAG({ reply: 'ok', model: 'gpt-4o', tokensUsed: 10, chunksUsed: [] })
-    await promise
+    expect(order[0]).toBe('extract-started')
+    expect(order[1]).toBe('rag-started')
+    // extração deve terminar antes do RAG começar
+    expect(order.indexOf('extract-started')).toBeLessThan(order.indexOf('rag-started'))
   })
 
   it('deve continuar normalmente se a extração falhar (RAG retorna resposta)', async () => {

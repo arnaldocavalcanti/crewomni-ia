@@ -10,7 +10,7 @@ describe('InMemoryQualificationStateRepository', () => {
     repo.clear()
   })
 
-  it('create: deve criar estado inicial com campos nulos e stage QUALIFYING', async () => {
+  it('create: deve criar estado inicial com fields vazio e stage QUALIFYING', async () => {
     const state = await repo.create({
       conversationId: 'conv-1',
       tenantId: 'tenant-1',
@@ -23,9 +23,8 @@ describe('InMemoryQualificationStateRepository', () => {
     expect(state.agentId).toBe('agent-1')
     expect(state.stage).toBe(ConversationStage.QUALIFYING)
     expect(state.lastIntent).toBeNull()
-    expect(state.fields.tipo_empresa).toBeNull()
-    expect(state.fields.telefone).toBeNull()
-    expect(state.fields.email).toBeNull()
+    expect(state.fields).toEqual({})
+    expect(state.schemaId).toBeNull()
   })
 
   it('findByConversation: deve retornar o estado correto pelo conversationId', async () => {

@@ -31,6 +31,7 @@ export class InMemoryQualificationStateRepository implements IQualificationState
       conversationId: data.conversationId,
       tenantId: data.tenantId,
       agentId: data.agentId,
+      schemaId: data.schemaId ?? null,
       stage: ConversationStage.QUALIFYING,
       lastIntent: null,
       fields: emptyQualificationFields(),
@@ -53,6 +54,7 @@ export class InMemoryQualificationStateRepository implements IQualificationState
       ...state,
       ...(data.stage !== undefined ? { stage: data.stage } : {}),
       ...(data.lastIntent !== undefined ? { lastIntent: data.lastIntent } : {}),
+      ...(data.schemaId !== undefined ? { schemaId: data.schemaId } : {}),
       fields: data.fields ? mergeQualificationFields(state.fields, data.fields) : state.fields,
       updatedAt: new Date(),
     }

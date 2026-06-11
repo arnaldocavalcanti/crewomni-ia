@@ -9,6 +9,8 @@ import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import { KnowledgeLayer } from '../entities/KnowledgeDocument'
 import { DEFAULT_TOP_K, DEFAULT_SIMILARITY_THRESHOLD } from '@/shared/constants'
 import type { QualificationState } from '@/domains/qualification/entities/QualificationState'
+import type { QualificationSchema } from '@/domains/qualification/entities/QualificationSchema'
+import { pickNextField } from '@/domains/qualification/use-cases/PickNextField'
 
 // ── Token budgets per layer (ADR 004) ─────────────────────────────────────────
 const TOKEN_BUDGET = {
@@ -28,6 +30,7 @@ type BuildRAGContextInput = {
   message: string
   conversationHistory?: ConversationMessage[]
   qualificationState?: QualificationState
+  qualificationSchema?: QualificationSchema
   crewMembers?: { role: string; agentSlug: string; agentName: string }[]
   tools?: any[]
 }
@@ -95,7 +98,7 @@ export class BuildRAGContext {
     const trimmedAgent = applyBudget(agentChunks, TOKEN_BUDGET.AGENT)
 
     // 7. Build system prompt (ADR 004 format)
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, trimmedTenant, trimmedAgent, input.qualificationState, input.crewMembers, input.conversationHistory)
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, trimmedTenant, trimmedAgent, input.qualificationState, input.qualificationSchema, input.crewMembers, input.conversationHistory)
 
     // 8. Build messages array: history + current message
     const history = input.conversationHistory ?? []
@@ -161,6 +164,7 @@ function buildSystemPrompt(
   tenantChunks: VectorSearchResult[],
   agentChunks: VectorSearchResult[],
   qualificationState?: QualificationState,
+  qualificationSchema?: QualificationSchema,
   crewMembers?: { role: string; agentSlug: string; agentName: string }[],
   conversationHistory?: { role: 'user' | 'assistant'; content: string }[]
 ): string {
@@ -175,11 +179,37 @@ function buildSystemPrompt(
     parts.push('PROIBIDO: repetir perguntas que já foram respondidas no histórico da conversa.')
     parts.push('PROIBIDO: inventar, supor ou mencionar dados que o lead NÃO forneceu explicitamente nesta conversa.')
     parts.push('OBRIGATÓRIO: analise o histórico completo e continue exatamente de onde parou.')
-    if (qualificationState?.stage) {
-      parts.push(`Estágio atual: ${qualificationState.stage}`)
+    parts.push('')
+  }
+
+  if (qualificationState) {
+    parts.push('---ESTADO DA QUALIFICAÇÃO---')
+    if (qualificationState.stage) parts.push(`etapa_atual: ${qualificationState.stage}`)
+    if (qualificationState.lastIntent) parts.push(`ultima_intencao: ${qualificationState.lastIntent}`)
+
+    const nonNullFields = Object.entries(qualificationState.fields).filter(([, v]) => v !== null && v !== undefined && v !== '')
+    if (nonNullFields.length > 0) {
+      parts.push('campos_coletados:')
+      if (qualificationSchema) {
+        const labelMap = new Map(qualificationSchema.fields.map((f) => [f.key, f.label ?? f.key]))
+        nonNullFields.forEach(([k, v]) => parts.push(`  ${labelMap.get(k) ?? k}: ${v}`))
+      } else {
+        nonNullFields.forEach(([k, v]) => parts.push(`  ${k}: ${v}`))
+      }
     }
-    if (qualificationState?.lastIntent) {
-      parts.push(`Última intenção identificada: ${qualificationState.lastIntent}`)
+
+    if (qualificationSchema && qualificationState) {
+      const nextField = pickNextField({ schema: qualificationSchema, state: qualificationState })
+      if (nextField) {
+        const fieldDef = qualificationSchema.fields.find((f) => f.key === nextField)
+        const label = fieldDef?.label ?? nextField
+        parts.push(`proximo_campo: ${nextField} (${label})`)
+        if (fieldDef?.type === 'enum' && fieldDef.enum) {
+          parts.push(`  valores_aceitos: [${fieldDef.enum.join(', ')}]`)
+        }
+      } else {
+        parts.push('proximo_campo: null (qualificação completa)')
+      }
     }
     parts.push('')
   }

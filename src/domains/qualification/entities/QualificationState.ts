@@ -21,22 +21,15 @@ export const LeadIntent = {
 
 export type LeadIntent = (typeof LeadIntent)[keyof typeof LeadIntent]
 
-export type QualificationFields = {
-  tipo_empresa: string | null
-  numero_colaboradores: string | null
-  usa_crm: string | null
-  nome_contato: string | null
-  telefone: string | null
-  email: string | null
-  nivel_interesse: string | null
-  objecao: string | null
-}
+// Dynamic fields — keyed by schema field keys; values are primitives or null
+export type QualificationFields = Record<string, string | number | boolean | null>
 
 export type QualificationState = {
   id: string
   conversationId: string
   tenantId: string
   agentId: string
+  schemaId: string | null   // null during backfill; resolved after migration
   stage: ConversationStage
   lastIntent: LeadIntent | null
   fields: QualificationFields
@@ -47,34 +40,26 @@ export type CreateQualificationStateData = {
   conversationId: string
   tenantId: string
   agentId: string
+  schemaId?: string | null
 }
 
 export type UpdateQualificationStateData = {
   stage?: ConversationStage
   lastIntent?: LeadIntent
-  fields?: Partial<QualificationFields>
+  fields?: QualificationFields
+  schemaId?: string | null
 }
 
 export function emptyQualificationFields(): QualificationFields {
-  return {
-    tipo_empresa: null,
-    numero_colaboradores: null,
-    usa_crm: null,
-    nome_contato: null,
-    telefone: null,
-    email: null,
-    nivel_interesse: null,
-    objecao: null,
-  }
+  return {}
 }
 
 export function mergeQualificationFields(
   current: QualificationFields,
-  updates: Partial<QualificationFields>,
+  updates: QualificationFields,
 ): QualificationFields {
   const result = { ...current }
-  for (const key of Object.keys(updates) as (keyof QualificationFields)[]) {
-    const val = updates[key]
+  for (const [key, val] of Object.entries(updates)) {
     if (val !== null && val !== undefined && val !== '') {
       result[key] = val
     }

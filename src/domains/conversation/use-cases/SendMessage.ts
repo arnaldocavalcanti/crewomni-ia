@@ -8,6 +8,7 @@ import type { IQualificationStateRepository } from '@/domains/qualification/repo
 import type { ExtractAndUpdateState, ExtractAndUpdateStateOutput } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
 import type { ICrewMemberRepository } from '@/domains/crew/repositories/ICrewMemberRepository'
 import type { TransferConversation } from './TransferConversation'
+import type { GetQualificationSchema } from '@/domains/qualification/use-cases/GetQualificationSchema'
 
 const MAX_MESSAGES = 200
 const HISTORY_LIMIT = 20
@@ -39,6 +40,7 @@ export class SendMessage {
     private extractState: ExtractAndUpdateState,
     private crewMemberRepo: ICrewMemberRepository,
     private transferConversation: TransferConversation,
+    private getQualificationSchema?: GetQualificationSchema,
     private checkUsageLimit?: { execute(input: { tenantId: string }): Promise<{ allowed: boolean; reason?: string }> },
     private recordUsage?: { execute(input: { tenantId: string, inputTokens: number, outputTokens: number, estimatedCostUsd: number }): Promise<void> },
   ) {}
@@ -157,9 +159,17 @@ export class SendMessage {
     let chunksUsed: { layer: string; count: number; totalScore: number }[] = []
     let failed = false
 
+    const schema = this.getQualificationSchema
+      ? await this.getQualificationSchema.execute({
+          agentId: conversation.agentId,
+          tenantId: input.tenantId,
+        }).catch(() => undefined)
+      : undefined
+
     try {
       const extractOutput: ExtractAndUpdateStateOutput = await (this.extractState as any).execute({
         state: qualState,
+        schema,
         message: input.message.trim(),
         conversationHistory,
       })
@@ -175,6 +185,7 @@ export class SendMessage {
         message: input.message.trim(),
         conversationHistory,
         qualificationState: qualState,
+        qualificationSchema: schema,
         crewMembers,
         tools,
       }),

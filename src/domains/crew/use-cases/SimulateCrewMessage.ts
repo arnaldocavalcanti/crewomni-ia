@@ -16,6 +16,7 @@ type SimulateInput = {
   mode: 'SIMULATE' | 'WHATSAPP_REAL'
   toPhone?: string
   isAdmin?: boolean
+  conversationId?: string
 }
 
 export class SimulateCrewMessage {
@@ -65,6 +66,7 @@ export class SimulateCrewMessage {
       agentId: director.agentId,
       message: input.message,
       crewId: input.crewId,
+      conversationId: input.conversationId,
     })
 
     const durationMs = Date.now() - startTime

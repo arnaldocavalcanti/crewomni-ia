@@ -8,6 +8,7 @@ const schema = z.object({
   message: z.string().min(1, 'Mensagem não pode ser vazia').max(2000),
   mode: z.enum(['SIMULATE', 'WHATSAPP_REAL']),
   toPhone: z.string().optional(),
+  conversationId: z.string().optional(),
 })
 
 export async function POST(
@@ -44,6 +45,7 @@ export async function POST(
       message: parsed.data.message,
       mode: parsed.data.mode,
       toPhone: parsed.data.toPhone,
+      conversationId: parsed.data.conversationId,
       isAdmin,
     })
 

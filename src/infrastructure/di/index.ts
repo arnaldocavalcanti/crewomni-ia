@@ -72,6 +72,9 @@ import { PrismaCrewRepository } from '@/infrastructure/db/repositories/PrismaCre
 import { PrismaCrewMemberRepository } from '@/infrastructure/db/repositories/PrismaCrewMemberRepository'
 import { InMemoryQualificationStateRepository } from '@/infrastructure/db/repositories/InMemoryQualificationStateRepository'
 import { PrismaQualificationStateRepository } from '@/infrastructure/db/repositories/PrismaQualificationStateRepository'
+import { InMemoryQualificationSchemaRepository } from '@/infrastructure/db/repositories/InMemoryQualificationSchemaRepository'
+import { PrismaQualificationSchemaRepository } from '@/infrastructure/db/repositories/PrismaQualificationSchemaRepository'
+import { GetQualificationSchema } from '@/domains/qualification/use-cases/GetQualificationSchema'
 import { ExtractAndUpdateState } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
 import { ValidateAndMerge } from '@/domains/qualification/use-cases/ValidateAndMerge'
 import { InMemoryTenantUsageLimitRepository } from '@/infrastructure/db/repositories/InMemoryTenantUsageLimitRepository'
@@ -183,6 +186,9 @@ const crewMemberRepo = usePrisma ? new PrismaCrewMemberRepository()  : new InMem
 const qualStateRepo = usePrisma
   ? new PrismaQualificationStateRepository()
   : new InMemoryQualificationStateRepository()
+const qualSchemaRepo = usePrisma
+  ? new PrismaQualificationSchemaRepository()
+  : new InMemoryQualificationSchemaRepository()
 
 const kdlInsightRepo   = usePrisma ? new PrismaKDLInsightRepository()         : new InMemoryKDLInsightRepository()
 const usageLimitRepo   = usePrisma ? new PrismaTenantUsageLimitRepository()   : new InMemoryTenantUsageLimitRepository()
@@ -225,6 +231,7 @@ const llmProvider = useOpenAI ? new OpenAILLMProvider() : {
 
 const validateAndMerge = new ValidateAndMerge(qualStateRepo, auditLogger)
 const extractState = new ExtractAndUpdateState(qualStateRepo, llmProvider, validateAndMerge)
+const getQualificationSchema = new GetQualificationSchema(agentRepo, qualSchemaRepo)
 
 // ─── Use-cases ────────────────────────────────────────────────────────────────
 
@@ -344,6 +351,7 @@ di.sendMessage = new SendMessage(
   extractState,
   crewMemberRepo,
   di.transferConversation,
+  getQualificationSchema,
   di.checkUsageLimit,
   di.recordUsage,
 )

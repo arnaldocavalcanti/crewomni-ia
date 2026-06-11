@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { api } from '@/lib/api'
 import { TestChatSimulator, type ChatMessage } from './TestChatSimulator'
 import { CrewFlowDiagram } from './CrewFlowDiagram'
@@ -25,12 +25,19 @@ export function CrewTestLab({ crewId, crewStatus, members, isAdmin }: Props) {
   const [toPhone, setToPhone] = useState('')
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [conversationId, setConversationId] = useState<string | undefined>()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [flowPath, setFlowPath] = useState<FlowPathEntry[]>([])
   const [handoffs, setHandoffs] = useState<HandoffEntry[]>([])
   const [trace, setTrace] = useState<TestSessionTrace | null>(null)
   const [viewMode, setViewMode] = useState<'flow' | 'trace'>('flow')
+
+  // Reset session and messages on mode switch
+  useEffect(() => {
+    setConversationId(undefined)
+    setMessages([])
+  }, [mode])
 
   const noMembers = members.length === 0
   const noDirector = members.length > 0 && !members.some((m) => m.role === 'DIRECTOR')
@@ -53,7 +60,12 @@ export function CrewTestLab({ crewId, crewStatus, members, isAdmin }: Props) {
         message: userMsg.text,
         mode,
         toPhone: mode === 'WHATSAPP_REAL' ? toPhone : undefined,
+        conversationId,
       })
+
+      if (!conversationId && result.conversationId) {
+        setConversationId(result.conversationId)
+      }
 
       setFlowPath(result.flowPath)
       setHandoffs(result.handoffs)

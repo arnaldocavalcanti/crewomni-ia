@@ -191,7 +191,7 @@ export const api = {
       request<void>(`/crews/${id}`, { method: 'DELETE' }),
     getMetrics: (id: string) =>
       request<CrewMetricsOutput>(`/crews/${id}/metrics`),
-    simulate: (id: string, data: { message: string; mode: 'SIMULATE' | 'WHATSAPP_REAL'; toPhone?: string }) =>
+    simulate: (id: string, data: { message: string; mode: 'SIMULATE' | 'WHATSAPP_REAL'; toPhone?: string; conversationId?: string }) =>
       request<TestSessionResult>(`/crews/${id}/simulate`, { method: 'POST', body: JSON.stringify(data) }),
     addMember: (crewId: string, data: { agentId: string; role: 'DIRECTOR' | 'MEMBER' | 'OBSERVER'; order: number; isRequired?: boolean }) =>
       request<any>(`/crews/${crewId}/members`, { method: 'POST', body: JSON.stringify(data) }),

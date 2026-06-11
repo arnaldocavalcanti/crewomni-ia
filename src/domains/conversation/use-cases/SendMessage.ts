@@ -150,15 +150,24 @@ export class SendMessage {
       }
     }
 
-    // 7. Run extraction and RAG in parallel.
+    // 7. Run extraction FIRST (sequential) so updated state is available to RAG.
     let reply = ''
     let model = 'unknown'
     let tokensUsed = 0
     let chunksUsed: { layer: string; count: number; totalScore: number }[] = []
     let failed = false
 
-    const [extractResult, ragResult] = await Promise.allSettled([
-      this.extractState.execute({ state: qualState, message: input.message.trim() }),
+    try {
+      qualState = await this.extractState.execute({
+        state: qualState,
+        message: input.message.trim(),
+        conversationHistory,
+      })
+    } catch {
+      // extraction failure is non-critical — proceed with stale state
+    }
+
+    const ragResult = await Promise.allSettled([
       this.ragContext.execute({
         tenantId: input.tenantId,
         agentId: conversation.agentId,
@@ -170,17 +179,14 @@ export class SendMessage {
       }),
     ])
 
-    if (extractResult.status === 'fulfilled') {
-      qualState = extractResult.value
-    }
+    if (ragResult[0].status === 'fulfilled') {
+      const ragValue = ragResult[0].value
+      reply = ragValue.reply
+      model = ragValue.model
+      tokensUsed = ragValue.tokensUsed
+      chunksUsed = ragValue.chunksUsed
 
-    if (ragResult.status === 'fulfilled') {
-      reply = ragResult.value.reply
-      model = ragResult.value.model
-      tokensUsed = ragResult.value.tokensUsed
-      chunksUsed = ragResult.value.chunksUsed
-
-      const toolCalls = ragResult.value.toolCalls
+      const toolCalls = ragValue.toolCalls
       if (toolCalls && toolCalls.length > 0) {
         for (const tc of toolCalls) {
           if (tc.function?.name === 'transfer_conversation') {

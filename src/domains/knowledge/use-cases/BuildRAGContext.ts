@@ -95,7 +95,7 @@ export class BuildRAGContext {
     const trimmedAgent = applyBudget(agentChunks, TOKEN_BUDGET.AGENT)
 
     // 7. Build system prompt (ADR 004 format)
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, trimmedTenant, trimmedAgent, input.qualificationState, input.crewMembers)
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, trimmedTenant, trimmedAgent, input.qualificationState, input.crewMembers, input.conversationHistory)
 
     // 8. Build messages array: history + current message
     const history = input.conversationHistory ?? []
@@ -161,24 +161,26 @@ function buildSystemPrompt(
   tenantChunks: VectorSearchResult[],
   agentChunks: VectorSearchResult[],
   qualificationState?: QualificationState,
-  crewMembers?: { role: string; agentSlug: string; agentName: string }[]
+  crewMembers?: { role: string; agentSlug: string; agentName: string }[],
+  conversationHistory?: { role: 'user' | 'assistant'; content: string }[]
 ): string {
   const parts: string[] = [base]
 
-  if (qualificationState) {
-    const nonNullFields = Object.entries(qualificationState.fields).filter(([, v]) => v !== null)
-    parts.push('', '---CONTEXTO DA CONVERSA EM ANDAMENTO---')
-    parts.push('ATENÇÃO: Esta é uma conversa em andamento. NÃO reinicie o fluxo. NÃO envie mensagem de apresentação novamente.')
-    parts.push('Continue a conversa a partir do ponto em que está, conforme o histórico abaixo.')
-    parts.push(`Estágio de qualificação: ${qualificationState.stage}`)
-    if (qualificationState.lastIntent) {
-      parts.push(`Última intenção do lead: ${qualificationState.lastIntent}`)
+  const turnCount = conversationHistory ? Math.floor(conversationHistory.length / 2) : 0
+
+  if (turnCount > 0) {
+    parts.push('', '---INSTRUÇÃO OBRIGATÓRIA---')
+    parts.push(`Esta é uma conversa EM ANDAMENTO. Você já realizou ${turnCount} trocas com este lead.`)
+    parts.push('PROIBIDO: enviar saudação ou apresentação novamente.')
+    parts.push('PROIBIDO: repetir perguntas que já foram respondidas no histórico da conversa.')
+    parts.push('PROIBIDO: inventar, supor ou mencionar dados que o lead NÃO forneceu explicitamente nesta conversa.')
+    parts.push('OBRIGATÓRIO: analise o histórico completo e continue exatamente de onde parou.')
+    if (qualificationState?.stage) {
+      parts.push(`Estágio atual: ${qualificationState.stage}`)
     }
-    if (nonNullFields.length > 0) {
-      parts.push('Campos estruturados coletados:')
-      nonNullFields.forEach(([k, v]) => parts.push(`  ${k}: ${v}`))
+    if (qualificationState?.lastIntent) {
+      parts.push(`Última intenção identificada: ${qualificationState.lastIntent}`)
     }
-    parts.push('REGRA: Se o histórico já contém uma pergunta respondida, avance para a próxima — nunca repita.')
     parts.push('')
   }
 

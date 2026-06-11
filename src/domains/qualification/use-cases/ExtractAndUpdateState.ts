@@ -6,6 +6,7 @@ import { ConversationStage, LeadIntent } from '../entities/QualificationState'
 type ExtractAndUpdateStateInput = {
   state: QualificationState
   message: string
+  conversationHistory?: { role: 'user' | 'assistant'; content: string }[]
 }
 
 type ExtractionResult = {
@@ -33,9 +34,13 @@ export class ExtractAndUpdateState {
   async execute(input: ExtractAndUpdateStateInput): Promise<QualificationState> {
     let extraction: ExtractionResult
     try {
+      const contextMessages: { role: 'user' | 'assistant'; content: string }[] = input.conversationHistory
+        ? [...input.conversationHistory.slice(-4), { role: 'user', content: input.message }]
+        : [{ role: 'user', content: input.message }]
+
       const result = await this.llmProvider.complete({
         systemPrompt: EXTRACTION_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: input.message }],
+        messages: contextMessages,
         model: 'gpt-4o-mini',
         maxTokens: 200,
       })

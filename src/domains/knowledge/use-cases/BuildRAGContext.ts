@@ -31,7 +31,7 @@ type BuildRAGContextInput = {
   conversationHistory?: ConversationMessage[]
   qualificationState?: QualificationState
   qualificationSchema?: QualificationSchema
-  crewMembers?: { role: string; agentSlug: string; agentName: string }[]
+  crewMembers?: { role: string; agentSlug: string; agentName: string; agentId: string; description?: string; operationalFunction?: string }[]
   tools?: any[]
 }
 
@@ -218,7 +218,10 @@ function buildSystemPrompt(
     parts.push('---EQUIPE (CREW)---')
     parts.push('Você pode transferir a conversa para os seguintes agentes, caso o assunto seja da especialidade deles:')
     crewMembers.forEach((member) => {
-      parts.push(`- ${member.agentName} (slug: ${member.agentSlug}, role: ${member.role})`)
+      let desc = `- ${member.agentName} (slug: ${member.agentSlug}, role: ${member.role})`
+      if (member.description) desc += `: ${member.description}`
+      if (member.operationalFunction) desc += ` [Função: ${member.operationalFunction}]`
+      parts.push(desc)
     })
     parts.push('Para transferir, use a tool "transfer_conversation" informando o agentSlug do agente de destino.')
     parts.push('')

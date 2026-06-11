@@ -351,6 +351,7 @@ di.sendMessage = new SendMessage(
   extractState,
   crewMemberRepo,
   di.transferConversation,
+  agentRepo,
   getQualificationSchema,
   di.checkUsageLimit,
   di.recordUsage,

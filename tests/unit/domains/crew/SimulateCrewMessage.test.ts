@@ -70,6 +70,7 @@ describe('SimulateCrewMessage', () => {
         model: 'gpt-4o-mini',
         tokensUsed: 100,
         isNewConversation: true,
+        agentId: AGENT_DIRECTOR_ID,
       }),
     }
     lifecycleRepo = {

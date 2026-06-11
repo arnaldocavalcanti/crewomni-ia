@@ -10,6 +10,8 @@ import type { ICrewMemberRepository } from '@/domains/crew/repositories/ICrewMem
 import type { TransferConversation } from './TransferConversation'
 import type { GetQualificationSchema } from '@/domains/qualification/use-cases/GetQualificationSchema'
 
+import type { IAgentRepository } from '@/domains/agent/repositories/IAgentRepository'
+
 const MAX_MESSAGES = 200
 const HISTORY_LIMIT = 20
 
@@ -29,6 +31,7 @@ type SendMessageOutput = {
   model: string
   tokensUsed: number
   isNewConversation: boolean
+  agentId: string
 }
 
 export class SendMessage {
@@ -40,6 +43,7 @@ export class SendMessage {
     private extractState: ExtractAndUpdateState,
     private crewMemberRepo: ICrewMemberRepository,
     private transferConversation: TransferConversation,
+    private agentRepo: IAgentRepository,
     private getQualificationSchema?: GetQualificationSchema,
     private checkUsageLimit?: { execute(input: { tenantId: string }): Promise<{ allowed: boolean; reason?: string }> },
     private recordUsage?: { execute(input: { tenantId: string, inputTokens: number, outputTokens: number, estimatedCostUsd: number }): Promise<void> },
@@ -112,17 +116,24 @@ export class SendMessage {
     }
 
     // Prepare Crew Context & Tools
-    let crewMembers: { role: string; agentSlug: string; agentName: string; agentId: string }[] = []
+    let crewMembers: { role: string; agentSlug: string; agentName: string; agentId: string; description?: string; operationalFunction?: string }[] = []
     let tools: any[] | undefined = undefined
 
     if (crewId) {
       const members = await this.crewMemberRepo.findAllByCrew(crewId, input.tenantId)
-      crewMembers = members.map((m) => ({
-        role: m.role,
-        agentSlug: m.agentId, // assuming agentId is used as slug/id
-        agentName: `Agente ${m.agentId}`,
-        agentId: m.agentId,
-      }))
+      crewMembers = await Promise.all(
+        members.map(async (m) => {
+          const agent = await this.agentRepo.findById(m.agentId, input.tenantId)
+          return {
+            role: m.role,
+            agentSlug: agent?.slug ?? m.agentId,
+            agentName: agent?.name ?? `Agente ${m.agentId}`,
+            agentId: m.agentId,
+            description: agent?.description ?? undefined,
+            operationalFunction: agent?.operationalFunction ?? undefined,
+          }
+        })
+      )
 
       if (crewMembers.length > 1) {
         tools = [
@@ -275,6 +286,7 @@ export class SendMessage {
       model,
       tokensUsed,
       isNewConversation,
+      agentId: conversation.agentId,
     }
   }
 }

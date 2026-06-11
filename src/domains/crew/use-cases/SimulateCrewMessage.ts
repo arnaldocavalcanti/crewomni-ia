@@ -101,12 +101,14 @@ export class SimulateCrewMessage {
       })
 
     const flowPath: FlowPathEntry[] = []
-    const directorAgent = agentMap.get(director.agentId)
+    const activeAgentId = result.agentId || director.agentId
+    const activeAgent = agentMap.get(activeAgentId)
+    const activeMember = members.find((m) => m.agentId === activeAgentId)
     flowPath.push({
-      agentId: director.agentId,
-      agentName: directorAgent?.name ?? 'Agente',
-      agentType: (directorAgent as any)?.type ?? 'UNKNOWN',
-      role: director.role as 'DIRECTOR' | 'MEMBER' | 'OBSERVER',
+      agentId: activeAgentId,
+      agentName: activeAgent?.name ?? 'Agente',
+      agentType: (activeAgent as any)?.type ?? 'UNKNOWN',
+      role: (activeMember?.role ?? director.role) as 'DIRECTOR' | 'MEMBER' | 'OBSERVER',
       action: handoffs.length > 0 ? 'TRANSFERRED' : 'RESPONDED',
       responseSnippet: handoffs.length === 0 ? result.reply.slice(0, 120) : undefined,
       durationMs,

@@ -119,6 +119,7 @@ describe('SendMessage', () => {
 
   let crewMemberRepo: any
   let transferConversation: any
+  let agentRepo: any
 
   beforeEach(() => {
     repo = makeRepo()
@@ -128,6 +129,15 @@ describe('SendMessage', () => {
     extractState = makeExtractState()
     crewMemberRepo = { findAllByCrew: vi.fn().mockResolvedValue([]) }
     transferConversation = { execute: vi.fn().mockResolvedValue({}) }
+    agentRepo = {
+      findById: vi.fn().mockImplementation(async (id) => ({
+        id,
+        name: `Agente ${id}`,
+        slug: id,
+        description: `Descrição ${id}`,
+        operationalFunction: `Função ${id}`,
+      })),
+    }
 
     useCase = new SendMessage(
       repo,
@@ -137,6 +147,7 @@ describe('SendMessage', () => {
       extractState as unknown as ExtractAndUpdateState,
       crewMemberRepo,
       transferConversation,
+      agentRepo,
     )
   })
 

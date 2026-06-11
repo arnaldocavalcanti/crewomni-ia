@@ -2,6 +2,11 @@ import { type NextRequest } from 'next/server'
 import { getValidatedSession as getSession } from '@/infrastructure/guards/withValidatedSession'
 import { errorResponse } from '@/shared/utils/apiResponse'
 
+if (typeof globalThis.DOMMatrix === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(globalThis as any).DOMMatrix = class DOMMatrix {}
+}
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
 
 export async function POST(request: NextRequest) {

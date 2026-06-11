@@ -264,6 +264,12 @@ export default function AgentEditPage() {
     setSaveError('')
     setSaving(true)
     try {
+      // Publish prompt first so auto-activation in PublishAgentPrompt runs before
+      // the explicit status update below — ensures the user's chosen status wins.
+      if (form.systemPrompt.trim().length >= 10) {
+        await api.agents.publishPrompt(id, form.systemPrompt)
+      }
+
       await api.agents.update(id, {
         name: form.name,
         description: form.description.trim() || undefined,
@@ -290,11 +296,6 @@ export default function AgentEditPage() {
         expectedExamples: form.expectedExamples.trim() || undefined,
         specificRules: form.specificRules.trim() || undefined,
       })
-
-      // Publish system prompt if changed
-      if (form.systemPrompt.trim().length >= 10) {
-        await api.agents.publishPrompt(id, form.systemPrompt)
-      }
 
       // Handle crew membership change
       const oldMembership = agent?.crewMembership ?? null

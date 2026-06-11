@@ -47,10 +47,8 @@ export async function POST(request: NextRequest) {
     if (ext === 'txt') {
       content = buffer.toString('utf-8')
     } else if (ext === 'pdf') {
-      // Dynamic import avoids issues with Next.js module resolution
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pdfModule = await import('pdf-parse') as any
-      const pdfParse = pdfModule.default ?? pdfModule
+      // Use eval('require') to bypass Next.js / Turbopack bundler parsing
+      const pdfParse = eval('require')('pdf-parse')
       const result = await pdfParse(buffer)
       content = result.text
     } else {

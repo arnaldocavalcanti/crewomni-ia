@@ -167,15 +167,17 @@ function buildSystemPrompt(
 
   if (qualificationState) {
     const nonNullFields = Object.entries(qualificationState.fields).filter(([, v]) => v !== null)
-    parts.push('', '---ESTADO DA QUALIFICAÇÃO---')
-    parts.push(`Estágio: ${qualificationState.stage}`)
+    parts.push('', '---PROGRESSO DA QUALIFICAÇÃO---')
+    parts.push(`Estágio atual: ${qualificationState.stage}`)
     if (qualificationState.lastIntent) {
-      parts.push(`Última intenção: ${qualificationState.lastIntent}`)
+      parts.push(`Última intenção detectada: ${qualificationState.lastIntent}`)
     }
     if (nonNullFields.length > 0) {
-      parts.push('Dados coletados:')
+      parts.push('Campos estruturados coletados:')
       nonNullFields.forEach(([k, v]) => parts.push(`  ${k}: ${v}`))
     }
+    parts.push('REGRA CRÍTICA: Use o histórico da conversa como fonte principal de progresso.')
+    parts.push('Nunca repita uma pergunta que já foi respondida no histórico, mesmo que o campo não apareça acima.')
     parts.push('')
   }
 

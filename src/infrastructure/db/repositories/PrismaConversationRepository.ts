@@ -76,10 +76,10 @@ export class PrismaConversationRepository implements IConversationRepository {
   async listRecentMessages(conversationId: string, limit: number): Promise<Message[]> {
     const records = await this.db.message.findMany({
       where: { conversationId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
       take: limit,
     })
-    return records.map((r: any) => this.toMessage(r))
+    return records.reverse().map((r: any) => this.toMessage(r))
   }
 
   async countMessages(conversationId: string): Promise<number> {

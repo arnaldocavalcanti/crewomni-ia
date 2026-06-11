@@ -994,7 +994,7 @@ export default function AgentEditPage() {
       {/* ── Tab: Base de Conhecimento ──────────────────────────────────────── */}
       {tab === 'knowledge' && (
         <div className="space-y-4 max-w-4xl">
-          <input ref={fileInputRef} type="file" accept=".txt,.pdf" className="hidden" onChange={handleFileUpload} />
+          <input ref={fileInputRef} type="file" accept=".txt,.pdf,.csv,.xls,.xlsx" className="hidden" onChange={handleFileUpload} />
 
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <p className="text-sm text-muted-foreground">
@@ -1008,7 +1008,7 @@ export default function AgentEditPage() {
               </Button>
               <Button size="sm" variant="outline" className="gap-2" disabled={parsing} onClick={() => fileInputRef.current?.click()}>
                 {parsing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                {parsing ? 'Lendo…' : '.txt / .pdf'}
+                {parsing ? 'Lendo…' : '.txt / .pdf / .csv / .xlsx'}
               </Button>
               {!showAddForm && (
                 <Button size="sm" className="gap-2" onClick={() => setShowAddForm(true)}>

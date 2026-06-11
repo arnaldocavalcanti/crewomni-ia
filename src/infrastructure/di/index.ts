@@ -73,6 +73,7 @@ import { PrismaCrewMemberRepository } from '@/infrastructure/db/repositories/Pri
 import { InMemoryQualificationStateRepository } from '@/infrastructure/db/repositories/InMemoryQualificationStateRepository'
 import { PrismaQualificationStateRepository } from '@/infrastructure/db/repositories/PrismaQualificationStateRepository'
 import { ExtractAndUpdateState } from '@/domains/qualification/use-cases/ExtractAndUpdateState'
+import { ValidateAndMerge } from '@/domains/qualification/use-cases/ValidateAndMerge'
 import { InMemoryTenantUsageLimitRepository } from '@/infrastructure/db/repositories/InMemoryTenantUsageLimitRepository'
 import { InMemoryTenantUsageCurrentRepository } from '@/infrastructure/db/repositories/InMemoryTenantUsageCurrentRepository'
 import { PrismaTenantUsageLimitRepository } from '@/infrastructure/db/repositories/PrismaTenantUsageLimitRepository'
@@ -222,7 +223,8 @@ const llmProvider = useOpenAI ? new OpenAILLMProvider() : {
   complete: async () => ({ content: '[LLM não configurado]', model: 'stub', tokensUsed: 0 }),
 }
 
-const extractState = new ExtractAndUpdateState(qualStateRepo, llmProvider)
+const validateAndMerge = new ValidateAndMerge(qualStateRepo, auditLogger)
+const extractState = new ExtractAndUpdateState(qualStateRepo, llmProvider, validateAndMerge)
 
 // ─── Use-cases ────────────────────────────────────────────────────────────────
 

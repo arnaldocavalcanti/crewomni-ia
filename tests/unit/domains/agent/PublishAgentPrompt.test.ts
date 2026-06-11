@@ -15,6 +15,7 @@ function makeAgent(overrides = {}): Agent {
     type: AgentType.SDR,
     category: 'Vendas',
     roleId: 'role-1',
+    departmentId: 'dept-1',
     operationalFunction: 'Qualificação de Leads',
     description: null,
     status: AgentStatus.DRAFT,

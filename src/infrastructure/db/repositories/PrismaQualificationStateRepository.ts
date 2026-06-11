@@ -35,6 +35,7 @@ export class PrismaQualificationStateRepository implements IQualificationStateRe
         conversationId: data.conversationId,
         tenantId: data.tenantId,
         agentId: data.agentId,
+        schemaId: data.schemaId ?? null,
         stage: ConversationStage.QUALIFYING,
         lastIntent: null,
         fields: emptyQualificationFields(),
@@ -62,6 +63,7 @@ export class PrismaQualificationStateRepository implements IQualificationStateRe
       data: {
         ...(data.stage !== undefined ? { stage: data.stage } : {}),
         ...(data.lastIntent !== undefined ? { lastIntent: data.lastIntent ?? null } : {}),
+        ...(data.schemaId !== undefined ? { schemaId: data.schemaId } : {}),
         fields: mergedFields,
       },
     })
@@ -75,6 +77,7 @@ export class PrismaQualificationStateRepository implements IQualificationStateRe
       conversationId: r.conversationId,
       tenantId: r.tenantId,
       agentId: r.agentId,
+      schemaId: r.schemaId ?? null,
       stage: r.stage as ConversationStage,
       lastIntent: r.lastIntent as LeadIntent | null,
       fields: r.fields as QualificationFields,

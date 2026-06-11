@@ -347,7 +347,7 @@ describe('SendMessage', () => {
 
     vi.mocked(extractState.execute).mockImplementation(async () => {
       order.push('extract-started')
-      return makeQualState()
+      return makeExtractOutput()
     })
     vi.mocked(ragContext.execute).mockImplementation(async () => {
       order.push('rag-started')

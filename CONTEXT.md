@@ -384,17 +384,39 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 
 ---
 
-### ✅ QualificationState (Etapas 1 + 2 IMPLEMENTADAS)
-**Objetivo:** Memória estruturada de qualificação SDR — elimina o agente repetindo perguntas já respondidas.
-**Entities:** `QualificationState` — campos de lead (tipo_empresa, numero_colaboradores, usa_crm, nome_contato, telefone, email, nivel_interesse, objecao), `ConversationStage`, `LeadIntent`
-**Use-cases:** `ExtractAndUpdateState` (chama gpt-4o-mini para extrair campos JSON; merge sem sobrescrever não-nulos; tolerante a falha de LLM)
-**Infra:** `InMemoryQualificationStateRepository`, `PrismaQualificationStateRepository`
-**Migration:** `20260605190000_add_qualification_states` — tabela com JSONB, unique index em conversationId, FK cascade
+### ✅ QualificationState — Schema por Nicho (IMPLEMENTADO — commit 731995d)
+**Spec:** `docs/specs/harness/qualification-state-schema-and-ordering.md` (APPROVED → IMPLEMENTED)
+**Objetivo:** Memória estruturada de qualificação SDR por nicho — elimina loop de re-pergunta, alucinação de dados e atraso de um turno.
+
+**Causas raízes resolvidas:**
+- **#1 Schema mismatch:** `QualificationFields` era struct hardcoded genérico (B2B). Agora é `Record<string,unknown>` dinâmico, guiado por `QualificationSchema` configurável por agente/nicho.
+- **#2 Race condition:** extração e RAG rodavam em paralelo — RAG lia estado pré-extração. Agora extração é **sequencial e anterior** ao RAG.
+- **#3 Few-shot contaminado:** prompt de extração agora é gerado dinamicamente do schema; sem valores literais de exemplo.
+- **#4 Prompt não harness-aware:** bloco `---ESTADO DA QUALIFICAÇÃO---` inclui `proximo_campo` determinístico via `PickNextField`.
+
+**Entities:**
+- `QualificationSchema` — `{ id, tenantId, nicheKey, version, fields: FieldDef[], order: string[] }`
+- `FieldDef` — `{ key, type: enum|string|integer|boolean, enum?, min?, max?, label? }`
+- `QualificationState.fields` → `Record<string, string|number|boolean|null>` (dinâmico)
+- `QualificationState.schemaId` → linkagem com schema (nullable durante backfill)
+
+**Use-cases:**
+- `GetQualificationSchema` — resolve schema: agente → global fallback (`GENERIC_FALLBACK_SCHEMA`)
+- `PickNextField` — puro/síncrono; retorna próximo campo nulo na `order` do schema
+- `ValidateAndMerge` — valida campo com Zod por tipo; merge não-destrutivo com evidência obrigatória para sobrescrever
+- `ExtractAndUpdateState` — prompt dinâmico por schema; LLM retorna `{ field, value, evidence }[]`; pipeline ValidateAndMerge; graceful fallback
+
 **Integração:**
-- `SendMessage` — carrega/cria estado → extração + RAG rodam em **paralelo** via `Promise.allSettled` (≈300ms de ganho por mensagem)
-- `BuildRAGContext` — injeta bloco `---ESTADO DA QUALIFICAÇÃO---` no system prompt com stage, lastIntent e campos não-nulos
-**Helpers compartilhados:** `emptyQualificationFields()` / `mergeQualificationFields()` exportados de `QualificationState.ts`
-**Testes:** 15 novos testes (unit) — inclui merge sem sobrescrita, resiliência a LLM failure, isolamento multi-tenant, paralelismo
+- `SendMessage` — `await extractState` → `await ragContext` (sequencial; estado sempre atual no RAG)
+- `BuildRAGContext.buildSystemPrompt` — injeta `proximo_campo`, labels do schema, `etapa_atual`, `ultima_intencao`
+
+**Infra:**
+- `InMemoryQualificationSchemaRepository` (novo)
+- `InMemoryQualificationStateRepository` — atualizado com `schemaId`
+- Prisma: tabela `qualification_schemas`, campo `schemaId` em `qualification_states`, `qualificationSchemaId` em `agents`
+- Seed: `src/infrastructure/seeds/qualification-schemas/vistoria-imobiliaria.ts` (15 campos) + `generic` (fallback)
+
+**Testes:** 343 unit tests passando (16 novos: `PickNextField` × 6, `ValidateAndMerge` × 10)
 
 ### ✅ Agent Roles (IMPLEMENTADO)
 **Entities:** `AgentRole`
@@ -474,6 +496,7 @@ Modelos implementados: `Tenant`, `TenantSettings`, `User`, `RefreshToken`, `ApiK
 | 1.5 | Workflow e Handoff entre agentes (TransferConversation) | ✅ IMPLEMENTADO |
 | 1.6 | Métricas de Crew (GetCrewMetrics + /api/v1/crews/:id/metrics) | ✅ IMPLEMENTADO |
 | 1.x | QualificationState SDR (extração paralela + persist JSONB) | ✅ IMPLEMENTADO |
+| B.SDR | Qualification schema por nicho + PickNextField + ValidateAndMerge (causas #1-#4 do loop SDR) | ✅ IMPLEMENTADO |
 
 ---
 

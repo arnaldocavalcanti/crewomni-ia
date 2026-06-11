@@ -29,6 +29,7 @@ function makeAgent(overrides = {}) {
     type: AgentType.SDR,
     category: 'Comercial',
     roleId: 'role-1',
+    departmentId: 'dept-1',
     operationalFunction: 'Conversacional',
     description: null,
     status: AgentStatus.DRAFT,

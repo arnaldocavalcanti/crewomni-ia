@@ -48,7 +48,7 @@ function makeCrewRepo(found: any = makeCrew()): ICrewRepository {
 
 function makeMemberRepo(overrides: Partial<ICrewMemberRepository> = {}): ICrewMemberRepository {
   return {
-    findById: vi.fn(), findAllByCrew: vi.fn(), findDirector: vi.fn(), delete: vi.fn(),
+    findById: vi.fn(), findAllByCrew: vi.fn(), findDirector: vi.fn(), delete: vi.fn(), findFirstByAgent: vi.fn(),
     create:             vi.fn().mockResolvedValue(makeMember()),
     findByCrewAndAgent: vi.fn().mockResolvedValue(null),
     countDirectors:     vi.fn().mockResolvedValue(0),

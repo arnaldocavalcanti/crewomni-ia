@@ -31,7 +31,7 @@ describe('ListCrewMembers', () => {
     }
     const memberRepo: ICrewMemberRepository = {
       create: vi.fn(), findById: vi.fn(), findByCrewAndAgent: vi.fn(),
-      findDirector: vi.fn(), countDirectors: vi.fn(), countByCrew: vi.fn(), delete: vi.fn(),
+      findDirector: vi.fn(), countDirectors: vi.fn(), countByCrew: vi.fn(), delete: vi.fn(), findFirstByAgent: vi.fn(),
       findAllByCrew: vi.fn().mockResolvedValue([
         makeMember({ id: 'mem-2', order: 1 }),
         makeMember({ id: 'mem-1', order: 0 }),
@@ -50,7 +50,7 @@ describe('ListCrewMembers', () => {
     }
     const memberRepo: ICrewMemberRepository = {
       create: vi.fn(), findById: vi.fn(), findByCrewAndAgent: vi.fn(),
-      findAllByCrew: vi.fn(), findDirector: vi.fn(), countDirectors: vi.fn(), countByCrew: vi.fn(), delete: vi.fn(),
+      findAllByCrew: vi.fn(), findDirector: vi.fn(), countDirectors: vi.fn(), countByCrew: vi.fn(), delete: vi.fn(), findFirstByAgent: vi.fn(),
     }
     await expect(new ListCrewMembers(crewRepo, memberRepo).execute({ crewId: 'crew-1', tenantId: 'tenant-2' }))
       .rejects.toMatchObject({ code: 'CREW_NOT_FOUND' })

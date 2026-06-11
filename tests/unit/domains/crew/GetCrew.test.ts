@@ -33,7 +33,7 @@ function makeCrewRepo(found: any = makeCrew()): ICrewRepository {
 function makeMemberRepo(members = [makeMember()]): ICrewMemberRepository {
   return {
     create: vi.fn(), findById: vi.fn(), findByCrewAndAgent: vi.fn(),
-    findDirector: vi.fn(), countDirectors: vi.fn(), countByCrew: vi.fn(), delete: vi.fn(),
+    findDirector: vi.fn(), countDirectors: vi.fn(), countByCrew: vi.fn(), delete: vi.fn(), findFirstByAgent: vi.fn(),
     findAllByCrew: vi.fn().mockResolvedValue(members),
   }
 }

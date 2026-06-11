@@ -1,4 +1,5 @@
 import { AppError } from '@/shared/errors/AppError'
+import { AgentStatus } from '@/domains/agent/entities/Agent'
 import type { ICrewRepository } from '../repositories/ICrewRepository'
 import type { ICrewMemberRepository } from '../repositories/ICrewMemberRepository'
 import type { IAgentRepository } from '@/domains/agent/repositories/IAgentRepository'
@@ -45,6 +46,18 @@ export class SimulateCrewMessage {
     }
 
     const director = members.find((m) => m.role === 'DIRECTOR') ?? members[0]
+
+    const directorAgentCheck = await this.agentRepo.findById(director.agentId, input.tenantId)
+    if (!directorAgentCheck) {
+      throw new AppError('AGENT_NOT_FOUND', 'O agente diretor da crew não foi encontrado.')
+    }
+    if (directorAgentCheck.status !== AgentStatus.ACTIVE) {
+      throw new AppError(
+        'DIRECTOR_NOT_ACTIVE',
+        `O agente diretor "${directorAgentCheck.name}" está como Rascunho. Ative-o antes de testar a crew.`,
+      )
+    }
+
     const startTime = Date.now()
 
     const result = await this.sendMessage.execute({

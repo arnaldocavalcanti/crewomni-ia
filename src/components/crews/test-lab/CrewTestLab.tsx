@@ -33,6 +33,7 @@ export function CrewTestLab({ crewId, crewStatus, members, isAdmin }: Props) {
   const [viewMode, setViewMode] = useState<'flow' | 'trace'>('flow')
 
   const noMembers = members.length === 0
+  const noDirector = members.length > 0 && !members.some((m) => m.role === 'DIRECTOR')
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return
@@ -97,6 +98,11 @@ export function CrewTestLab({ crewId, crewStatus, members, isAdmin }: Props) {
       {noMembers && (
         <div className="px-4 py-2 text-xs bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-b border-red-200 dark:border-red-800">
           ⛔ Adicione agentes à Crew antes de testar.
+        </div>
+      )}
+      {noDirector && (
+        <div className="px-4 py-2 text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-b border-amber-200 dark:border-amber-800">
+          ⚠️ Nenhum agente está definido como <strong>Diretor</strong>. O primeiro membro adicionado será usado como ponto de entrada. Edite um agente e defina seu papel na crew como <strong>🎯 Diretor</strong>.
         </div>
       )}
 

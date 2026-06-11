@@ -92,6 +92,7 @@ export default function AgentEditPage() {
     status: 'ACTIVE',
     departmentId: '',
     crewId: '',
+    crewRole: 'MEMBER' as 'MEMBER' | 'DIRECTOR',
     directorId: '',
     mainChannel: 'WhatsApp + E-mail',
     toneOfVoice: 'Profissional e consultivo',
@@ -177,6 +178,7 @@ export default function AgentEditPage() {
           status: agentData.status,
           departmentId: agentData.departmentId ?? '',
           crewId: agentData.crewMembership?.crewId ?? '',
+          crewRole: (agentData.crewMembership?.role as 'MEMBER' | 'DIRECTOR') ?? 'MEMBER',
           directorId: agentData.directorId ?? '',
           mainChannel: agentData.mainChannel ?? 'WhatsApp + E-mail',
           toneOfVoice: agentData.toneOfVoice ?? 'Profissional e consultivo',
@@ -297,17 +299,18 @@ export default function AgentEditPage() {
         specificRules: form.specificRules.trim() || undefined,
       })
 
-      // Handle crew membership change
+      // Handle crew membership change (crew changed OR role changed within same crew)
       const oldMembership = agent?.crewMembership ?? null
       const newCrewId = form.crewId && form.crewId !== 'sem-crew' ? form.crewId : null
       const oldCrewId = oldMembership?.crewId ?? null
+      const roleChanged = oldMembership && oldCrewId === newCrewId && oldMembership.role !== form.crewRole
 
-      if (oldCrewId !== newCrewId) {
+      if (oldCrewId !== newCrewId || roleChanged) {
         if (oldMembership) {
           await api.crews.removeMember(oldCrewId!, oldMembership.id).catch(() => {})
         }
         if (newCrewId) {
-          await api.crews.addMember(newCrewId, { agentId: id, role: 'MEMBER', order: 0 })
+          await api.crews.addMember(newCrewId, { agentId: id, role: form.crewRole, order: 0 })
         }
       }
 
@@ -647,6 +650,23 @@ export default function AgentEditPage() {
                         .map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {form.crewId && form.crewId !== 'sem-crew' && (
+                    <div className="flex gap-2 mt-1.5">
+                      {(['MEMBER', 'DIRECTOR'] as const).map(r => (
+                        <button key={r} type="button" onClick={() => set('crewRole', r)}
+                          className={cn(
+                            'flex-1 h-8 rounded-lg text-xs font-semibold border transition',
+                            form.crewRole === r
+                              ? r === 'DIRECTOR'
+                                ? 'bg-[#4F6EF7] text-white border-transparent'
+                                : 'bg-[#7C3AED] text-white border-transparent'
+                              : 'bg-input text-muted-foreground border-border hover:bg-muted/50',
+                          )}>
+                          {r === 'DIRECTOR' ? '🎯 Diretor' : '🤖 Membro'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">

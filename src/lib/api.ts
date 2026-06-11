@@ -135,11 +135,28 @@ export const api = {
       const token = getAccessToken()
       const formData = new FormData()
       formData.append('file', file)
-      const res = await fetch(`${BASE}/knowledge/parse-file`, {
+      let res = await fetch(`${BASE}/knowledge/parse-file`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       })
+
+      if (res.status === 401) {
+        const refreshed = await refreshToken()
+        if (refreshed) {
+          const newToken = getAccessToken()
+          res = await fetch(`${BASE}/knowledge/parse-file`, {
+            method: 'POST',
+            headers: newToken ? { Authorization: `Bearer ${newToken}` } : {},
+            body: formData,
+          })
+        } else {
+          clearAccessToken()
+          window.location.href = '/login'
+          throw new Error('Session expired')
+        }
+      }
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({ message: 'Erro ao processar arquivo' }))
         throw new ApiError(err.code ?? 'UNKNOWN', err.message ?? 'Erro ao processar arquivo', res.status)

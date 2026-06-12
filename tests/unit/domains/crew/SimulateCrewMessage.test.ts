@@ -199,11 +199,12 @@ describe('SimulateCrewMessage', () => {
     })
 
     expect(sendMessage.execute).toHaveBeenCalledTimes(2)
-    // Second call must skip user message persistence
+    // Second call must skip user message persistence and use a synthetic proactive message
     expect(sendMessage.execute).toHaveBeenNthCalledWith(2, expect.objectContaining({
       agentId: AGENT_MEMBER_ID,
       skipUserMessage: true,
       conversationId: 'conv-1',
+      message: expect.stringContaining('[SISTEMA]'),
     }))
     expect(result.reply).toBe('Olá! Sou o especialista em e-mail. Vou enviar as informações para você.')
   })

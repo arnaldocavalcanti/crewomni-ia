@@ -69,8 +69,11 @@ export class SimulateCrewMessage {
       conversationId: input.conversationId,
     })
 
-    // After a transfer, invoke the new agent so it can respond proactively.
-    // skipUserMessage=true avoids re-persisting the user message already saved above.
+    // After a transfer, invoke the new agent proactively so it can greet the user.
+    // We pass a synthetic context message (not the user's original message) so the
+    // newly assigned agent is not confused by re-receiving unrelated user input.
+    // skipUserMessage=true prevents this synthetic message from being persisted.
+    const PROACTIVE_CONTEXT = '[SISTEMA] Você foi designado para continuar este atendimento. Continue de onde a conversa parou.'
     const MAX_TRANSFER_DEPTH = 3
     let depth = 0
     let previousAgentId = director.agentId
@@ -79,7 +82,7 @@ export class SimulateCrewMessage {
       result = await this.sendMessage.execute({
         tenantId: input.tenantId,
         agentId: result.agentId,
-        message: input.message,
+        message: PROACTIVE_CONTEXT,
         crewId: input.crewId,
         conversationId: result.conversationId,
         skipUserMessage: true,

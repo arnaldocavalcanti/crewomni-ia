@@ -435,4 +435,57 @@ describe('SendMessage', () => {
     })
     expect(result.reply).toContain('transferindo')
   })
+
+  it('não deve persistir reply vazio quando transfer_conversation é chamado com slug inválido', async () => {
+    vi.mocked(repo.findConversationById).mockResolvedValue(makeConversation({ crewId: 'crew-1' }))
+    crewMemberRepo.findAllByCrew.mockResolvedValue([
+      { agentId: 'agent-1', role: 'DIRECTOR' },
+      { agentId: 'agent-2', role: 'MEMBER' },
+    ])
+    vi.mocked(ragContext.execute).mockResolvedValue({
+      reply: '',
+      model: 'gpt-4o',
+      tokensUsed: 100,
+      chunksUsed: [],
+      toolCalls: [{
+        function: {
+          name: 'transfer_conversation',
+          arguments: '{"targetAgentSlug":"slug-inexistente-qualquer"}'
+        }
+      }]
+    })
+
+    const result = await useCase.execute(makeInput({ conversationId: 'conv-1', crewId: 'crew-1' }))
+
+    expect(transferConversation.execute).not.toHaveBeenCalled()
+    expect(result.reply).toBeTruthy()
+    expect(result.reply.length).toBeGreaterThan(0)
+  })
+
+  it('deve aceitar targetAgentSlug pelo agentId quando slug não bate exatamente', async () => {
+    vi.mocked(repo.findConversationById).mockResolvedValue(makeConversation({ crewId: 'crew-1' }))
+    crewMemberRepo.findAllByCrew.mockResolvedValue([
+      { agentId: 'agent-1', role: 'DIRECTOR' },
+      { agentId: 'agent-2', role: 'MEMBER' },
+    ])
+    vi.mocked(ragContext.execute).mockResolvedValue({
+      reply: '',
+      model: 'gpt-4o',
+      tokensUsed: 100,
+      chunksUsed: [],
+      toolCalls: [{
+        function: {
+          name: 'transfer_conversation',
+          arguments: '{"targetAgentSlug":"agent-2"}'  // agentId used as fallback slug
+        }
+      }]
+    })
+
+    const result = await useCase.execute(makeInput({ conversationId: 'conv-1', crewId: 'crew-1' }))
+
+    expect(transferConversation.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ targetAgentId: 'agent-2' })
+    )
+    expect(result.reply).toContain('transferindo')
+  })
 })

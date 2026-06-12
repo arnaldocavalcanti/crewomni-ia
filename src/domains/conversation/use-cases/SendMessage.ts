@@ -219,8 +219,13 @@ export class SendMessage {
           if (tc.function?.name === 'transfer_conversation') {
             try {
               const args = JSON.parse(tc.function.arguments)
-              if (args.targetAgentSlug) {
-                const targetMember = crewMembers.find(m => m.agentSlug === args.targetAgentSlug)
+              const slug: string = args.targetAgentSlug ?? ''
+              if (slug) {
+                const targetMember = crewMembers.find(m => m.agentSlug === slug)
+                  ?? crewMembers.find(m => m.agentId === slug)
+                  ?? crewMembers.find(m =>
+                    m.agentName.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase()
+                  )
                 if (targetMember) {
                   await this.transferConversation.execute({
                     tenantId: input.tenantId,
@@ -237,6 +242,11 @@ export class SendMessage {
             }
           }
         }
+      }
+
+      // Never persist an empty reply — LLM may return only tool calls with no text content
+      if (!reply) {
+        reply = 'Estou processando sua solicitação, aguarde um momento.'
       }
     } else {
       failed = true

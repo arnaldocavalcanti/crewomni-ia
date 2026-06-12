@@ -55,6 +55,8 @@ export default function EditCrewPage() {
           id: m.id,
           agentId: m.agentId,
           agentName: m.agent?.name ?? m.agentId,
+          agentType: m.agent?.type ?? undefined,
+          agentStatus: m.agent?.status ?? undefined,
           role: m.role,
         }))
         setMembers(mappedMembers)

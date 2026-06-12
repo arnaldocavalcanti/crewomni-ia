@@ -7,6 +7,8 @@ export type CrewMember = {
   id: string
   agentId: string
   agentName: string
+  agentType?: string
+  agentStatus?: string
   role: 'DIRECTOR' | 'MEMBER' | 'OBSERVER'
 }
 
@@ -91,6 +93,11 @@ export function CrewMembersSection({ crewId, members, onRefresh }: Props) {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground">{m.agentName}</p>
+                    {(m.agentType || m.agentStatus) && (
+                      <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                        {[m.agentType, m.agentStatus === 'ACTIVE' ? 'Ativo' : m.agentStatus === 'DRAFT' ? 'Rascunho' : m.agentStatus].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                   </div>
                 </div>
 

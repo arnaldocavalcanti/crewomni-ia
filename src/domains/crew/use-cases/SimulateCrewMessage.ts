@@ -69,11 +69,11 @@ export class SimulateCrewMessage {
       conversationId: input.conversationId,
     })
 
-    // After a transfer, invoke the new agent proactively so it can greet the user.
-    // We pass a synthetic context message (not the user's original message) so the
-    // newly assigned agent is not confused by re-receiving unrelated user input.
+    // After a transfer, invoke the new agent proactively so it can respond to the user.
+    // We pass a synthetic context that includes the user's last message so the newly
+    // assigned agent has enough context to act (e.g., the email address just provided).
     // skipUserMessage=true prevents this synthetic message from being persisted.
-    const PROACTIVE_CONTEXT = '[SISTEMA] Você foi designado para continuar este atendimento. Continue de onde a conversa parou.'
+    const PROACTIVE_CONTEXT = `[SISTEMA] Você foi designado para continuar este atendimento por transferência do agente anterior. A última mensagem do lead foi: "${input.message}". Continue o atendimento.`
     const MAX_TRANSFER_DEPTH = 3
     let depth = 0
     let previousAgentId = director.agentId

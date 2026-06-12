@@ -3,6 +3,7 @@ import type { ICrewMemberRepository } from '@/domains/crew/repositories/ICrewMem
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import { AppError } from '@/shared/errors/AppError'
 import type { Conversation } from '../entities/Conversation'
+import type { ApplyLifecycleTransition } from '@/domains/conversation-lifecycle/use-cases/ApplyLifecycleTransition'
 
 export type TransferConversationInput = {
   tenantId: string
@@ -15,6 +16,7 @@ export class TransferConversation {
     private conversationRepo: IConversationRepository,
     private crewMemberRepo: ICrewMemberRepository,
     private auditLogger: IAuditLogger,
+    private applyLifecycleTransition: ApplyLifecycleTransition,
   ) {}
 
   async execute(input: TransferConversationInput): Promise<Conversation> {
@@ -46,6 +48,15 @@ export class TransferConversation {
     await this.conversationRepo.updateConversationAgent(conversationId, targetAgentId, tenantId)
     conversation.agentId = targetAgentId
 
+    // Salva o lifecycle event usando o caso de uso oficial de transição de ciclo de vida
+    await this.applyLifecycleTransition.execute({
+      tenantId,
+      conversationId,
+      toStatus: 'ACTIVE',
+      actor: 'SYSTEM',
+      reason: `TRANSFER:${oldAgentId}:${targetAgentId}`, // Serializa no campo reason para não precisar de migração no banco!
+    })
+
     await this.auditLogger.log({
       tenantId,
       action: 'CONVERSATION_TRANSFERRED',
@@ -61,3 +72,4 @@ export class TransferConversation {
     return conversation
   }
 }
+

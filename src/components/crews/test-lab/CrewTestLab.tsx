@@ -117,6 +117,9 @@ export function CrewTestLab({ crewId, crewStatus, members, isAdmin }: Props) {
           ⚠️ Nenhum agente está definido como <strong>Diretor</strong>. O primeiro membro adicionado será usado como ponto de entrada. Edite um agente e defina seu papel na crew como <strong>🎯 Diretor</strong>.
         </div>
       )}
+      <div className="px-4 py-2 text-xs bg-muted/40 text-muted-foreground border-b border-border flex items-center gap-2">
+        <span>💡 <strong>Dica de Handoff:</strong> Para a transferência automática funcionar, certifique-se de que os agentes tenham <strong>descrições claras</strong> sobre suas especialidades (ex: "Especialista em enviar propostas por e-mail"). O Diretor decide a transferência com base nessas descrições.</span>
+      </div>
 
       <div className="flex flex-1 min-h-0">
         <div className="w-[360px] flex-shrink-0 flex flex-col min-h-0">

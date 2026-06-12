@@ -385,7 +385,7 @@ describe('SendMessage', () => {
   // ── Handoff (TransferConversation) ───────────────────────────────────────
 
   it('deve prover a tool transfer_conversation se a crew tiver mais de 1 membro', async () => {
-    vi.mocked(repo.findConversationById).mockResolvedValue(makeConversation({ crewId: 'crew-1' }))
+    vi.mocked(repo.findConversationById).mockResolvedValue(makeConversation({ agentId: 'agent-1', crewId: 'crew-1' }))
     crewMemberRepo.findAllByCrew.mockResolvedValue([
       { agentId: 'agent-1', role: 'DIRECTOR' },
       { agentId: 'agent-2', role: 'MEMBER' },
@@ -395,10 +395,9 @@ describe('SendMessage', () => {
 
     expect(ragContext.execute).toHaveBeenCalledWith(
       expect.objectContaining({
-        crewMembers: expect.arrayContaining([
-          expect.objectContaining({ agentSlug: 'agent-1' }),
+        crewMembers: [
           expect.objectContaining({ agentSlug: 'agent-2' }),
-        ]),
+        ],
         tools: expect.arrayContaining([
           expect.objectContaining({
             function: expect.objectContaining({ name: 'transfer_conversation' })

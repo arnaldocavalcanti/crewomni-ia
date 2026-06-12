@@ -165,7 +165,7 @@ function buildSystemPrompt(
   agentChunks: VectorSearchResult[],
   qualificationState?: QualificationState,
   qualificationSchema?: QualificationSchema,
-  crewMembers?: { role: string; agentSlug: string; agentName: string }[],
+  crewMembers?: { role: string; agentSlug: string; agentName: string; agentId: string; description?: string; operationalFunction?: string }[],
   conversationHistory?: { role: 'user' | 'assistant'; content: string }[]
 ): string {
   const parts: string[] = [base]
@@ -216,14 +216,19 @@ function buildSystemPrompt(
 
   if (crewMembers && crewMembers.length > 0) {
     parts.push('---EQUIPE (CREW)---')
-    parts.push('Você pode transferir a conversa para os seguintes agentes, caso o assunto seja da especialidade deles:')
+    parts.push('Você faz parte de uma equipe (Crew) e pode transferir a conversa para os seguintes agentes especializados:')
     crewMembers.forEach((member) => {
       let desc = `- ${member.agentName} (slug: ${member.agentSlug}, role: ${member.role})`
       if (member.description) desc += `: ${member.description}`
       if (member.operationalFunction) desc += ` [Função: ${member.operationalFunction}]`
       parts.push(desc)
     })
-    parts.push('Para transferir, use a tool "transfer_conversation" informando o agentSlug do agente de destino.')
+    parts.push('')
+    parts.push('Diretrizes de Transferência:')
+    parts.push('1. Transfira a conversa imediatamente assim que a solicitação ou o assunto do usuário estiver relacionado à especialidade, descrição ou função de outro agente da lista (ex: se o usuário pedir para enviar algo por e-mail, e houver um especialista em e-mails ou mensagens formatadas, transfira).')
+    parts.push('2. Não tente processar, responder ou coletar mais informações para solicitações fora de sua especialidade se houver um agente mais adequado na equipe.')
+    parts.push('3. Para transferir, use a tool "transfer_conversation" informando o targetAgentSlug do agente de destino.')
+    parts.push('4. Você NÃO deve transferir a conversa para si mesmo (o seu próprio slug não estará na lista de equipe acima). Se a solicitação do usuário estiver alinhada com a sua própria especialidade/descrição, processe a solicitação e responda diretamente.')
     parts.push('')
   }
 

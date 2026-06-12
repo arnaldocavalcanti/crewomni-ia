@@ -86,20 +86,35 @@ export class SimulateCrewMessage {
     )
 
     const handoffs: HandoffEntry[] = lifecycleEvents
-      .filter((e) => (e as any).metadata?.type === 'TRANSFER')
+      .filter((e) => (e as any).metadata?.type === 'TRANSFER' || (e.reason && e.reason.startsWith('TRANSFER:')))
       .map((e) => {
-        const meta = (e as any).metadata
-        const from = agentMap.get(meta.fromAgentId as string)
-        const to = agentMap.get(meta.toAgentId as string)
+        let fromAgentId = ''
+        let toAgentId = ''
+        let reason: string | undefined = undefined
+
+        if (e.reason && e.reason.startsWith('TRANSFER:')) {
+          const parts = e.reason.split(':')
+          fromAgentId = parts[1] || ''
+          toAgentId = parts[2] || ''
+        } else {
+          const meta = (e as any).metadata
+          fromAgentId = meta.fromAgentId as string
+          toAgentId = meta.toAgentId as string
+          reason = meta.reason as string | undefined
+        }
+
+        const from = agentMap.get(fromAgentId)
+        const to = agentMap.get(toAgentId)
         return {
-          fromAgentId: meta.fromAgentId as string,
+          fromAgentId,
           fromAgentName: from?.name ?? 'Agente desconhecido',
-          toAgentId: meta.toAgentId as string,
+          toAgentId,
           toAgentName: to?.name ?? 'Agente desconhecido',
-          reason: meta.reason as string | undefined,
+          reason,
         }
       })
 
+    const directorAgent = agentMap.get(director.agentId)
     const flowPath: FlowPathEntry[] = []
     const activeAgentId = result.agentId || director.agentId
     const activeAgent = agentMap.get(activeAgentId)

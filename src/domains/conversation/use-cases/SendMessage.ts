@@ -121,8 +121,9 @@ export class SendMessage {
 
     if (crewId) {
       const members = await this.crewMemberRepo.findAllByCrew(crewId, input.tenantId)
+      const otherMembers = members.filter((m) => m.agentId !== conversation.agentId)
       crewMembers = await Promise.all(
-        members.map(async (m) => {
+        otherMembers.map(async (m) => {
           const agent = await this.agentRepo.findById(m.agentId, input.tenantId)
           return {
             role: m.role,
@@ -135,7 +136,7 @@ export class SendMessage {
         })
       )
 
-      if (crewMembers.length > 1) {
+      if (crewMembers.length > 0) {
         tools = [
           {
             type: 'function',

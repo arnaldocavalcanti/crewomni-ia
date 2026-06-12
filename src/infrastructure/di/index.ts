@@ -233,7 +233,7 @@ const validateAndMerge = new ValidateAndMerge(qualStateRepo, auditLogger)
 const extractState = new ExtractAndUpdateState(qualStateRepo, llmProvider, validateAndMerge)
 const getQualificationSchema = new GetQualificationSchema(agentRepo, qualSchemaRepo)
 
-// ─── Use-cases ────────────────────────────────────────────────────────────────
+// Use-cases
 
 const receiveInboundEvent = new ReceiveInboundEvent(inboundEventRepo, queueProvider)
 const traceRecorder       = new RecordExecutionTrace(traceRepo)
@@ -243,6 +243,9 @@ const summarizeConversation = new SummarizeConversation(conversationRepo, summar
 const applyLifecycleTransition = new ApplyLifecycleTransition(conversationRepo, lifecycleRepo)
 const requestHumanHandoff = new RequestHumanHandoff(applyLifecycleTransition)
 const acceptHumanHandoff = new AcceptHumanHandoff(applyLifecycleTransition)
+
+// Now we can construct di.transferConversation with applyLifecycleTransition
+di.transferConversation = new TransferConversation(conversationRepo, crewMemberRepo, auditLogger, applyLifecycleTransition)
 
 // Distillation
 const runKDL = new RunKDL(kdlInsightRepo, conversationRepo, tenantRepo, llmProvider)
@@ -302,7 +305,7 @@ export const di = {
   listConversations:       new ListConversations(conversationRepo),
   getConversationMessages: new GetConversationMessages(conversationRepo),
   getConversationDetails:  new GetConversationDetails(conversationRepo, qualStateRepo, summaryRepo, lifecycleRepo),
-  transferConversation:    new TransferConversation(conversationRepo, crewMemberRepo, auditLogger),
+  transferConversation:    new TransferConversation(conversationRepo, crewMemberRepo, auditLogger, null as unknown as any),
   operatorReply:           new OperatorReply(conversationRepo, auditLogger),
   sendMessage:             null as unknown as SendMessage,
   // Usage Limits

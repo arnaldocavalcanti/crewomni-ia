@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { api, ApiError } from '@/lib/api'
@@ -14,6 +14,7 @@ import VisualWorkflowBuilder from '@/components/crews/VisualWorkflowBuilder'
 import { CrewTestLab } from '@/components/crews/test-lab/CrewTestLab'
 
 type CrewMember = {
+  id: string
   agentId: string
   agentName: string
   role: 'DIRECTOR' | 'MEMBER' | 'OBSERVER'
@@ -48,7 +49,7 @@ export default function EditCrewPage() {
 
   const slugPreview = name ? toSlug(name) : null
 
-  useEffect(() => {
+  const loadCrew = useCallback(() => {
     api.crews.get(id as string)
       .then((res) => {
         const crew = res.crew
@@ -57,6 +58,7 @@ export default function EditCrewPage() {
         setDescription(crew.description ?? '')
         setStatus(crew.status)
         const mappedMembers = ((res as any).members ?? []).map((m: any) => ({
+          id: m.id,
           agentId: m.agentId,
           agentName: m.agent?.name ?? m.agentId,
           role: m.role,
@@ -69,6 +71,8 @@ export default function EditCrewPage() {
       })
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => { loadCrew() }, [loadCrew])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

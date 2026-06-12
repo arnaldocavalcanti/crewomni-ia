@@ -204,7 +204,7 @@ describe('SimulateCrewMessage', () => {
       agentId: AGENT_MEMBER_ID,
       skipUserMessage: true,
       conversationId: 'conv-1',
-      message: expect.stringContaining('me envie por email'),
+      message: expect.stringContaining('[SISTEMA]'),
     }))
     expect(result.reply).toBe('Olá! Sou o especialista em e-mail. Vou enviar as informações para você.')
   })

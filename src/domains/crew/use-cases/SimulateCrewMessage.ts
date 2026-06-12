@@ -70,10 +70,12 @@ export class SimulateCrewMessage {
     })
 
     // After a transfer, invoke the new agent proactively so it can respond to the user.
-    // We pass a synthetic context that includes the user's last message so the newly
-    // assigned agent has enough context to act (e.g., the email address just provided).
-    // skipUserMessage=true prevents this synthetic message from being persisted.
-    const PROACTIVE_CONTEXT = `[SISTEMA] Você foi designado para continuar este atendimento por transferência do agente anterior. A última mensagem do lead foi: "${input.message}". Continue o atendimento.`
+    // SECURITY: Do NOT interpolate input.message here — that is untrusted user text and
+    // concatenating it into a [SISTEMA]-tagged string creates a prompt injection vector.
+    // The new agent already sees the full conversation history (including the user's last
+    // message) via listRecentMessages inside SendMessage, so no repetition is needed.
+    // skipUserMessage=true prevents this constant string from being persisted.
+    const PROACTIVE_CONTEXT = '[SISTEMA] Você foi designado para continuar este atendimento por transferência do agente anterior. Analise o histórico da conversa e continue o atendimento.'
     const MAX_TRANSFER_DEPTH = 3
     let depth = 0
     let previousAgentId = director.agentId

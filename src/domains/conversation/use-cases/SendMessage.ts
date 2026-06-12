@@ -243,7 +243,9 @@ export class SendMessage {
             try {
               const args = JSON.parse(tc.function.arguments)
               const { to, subject, body } = args
-              if (to && subject && body && this.emailDispatcher) {
+              if (!to || !subject || !body) {
+                console.warn('send_email tool called with missing required fields:', { to, subject, body })
+              } else if (this.emailDispatcher) {
                 const dispatchResult = await this.emailDispatcher.send({
                   tenantId: input.tenantId,
                   conversationId,
@@ -255,7 +257,9 @@ export class SendMessage {
                   // Override reply with explicit error message (user-configured behavior)
                   reply = `Não foi possível enviar o email: ${dispatchResult.error ?? 'canal não configurado'}.`
                 }
-                // On success: keep the LLM's pre-generated reply (global fallback below handles empty)
+                // On success: keep the LLM's pre-generated reply.
+                // If the LLM returned only a tool call (no text), reply is "" and the
+                // global fallback below will fire — that is intentional.
               }
             } catch (e) {
               console.error('Failed to parse or execute send_email tool call:', e)

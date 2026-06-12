@@ -61,13 +61,31 @@ export class SimulateCrewMessage {
 
     const startTime = Date.now()
 
-    const result = await this.sendMessage.execute({
+    let result = await this.sendMessage.execute({
       tenantId: input.tenantId,
       agentId: director.agentId,
       message: input.message,
       crewId: input.crewId,
       conversationId: input.conversationId,
     })
+
+    // After a transfer, invoke the new agent so it can respond proactively.
+    // skipUserMessage=true avoids re-persisting the user message already saved above.
+    const MAX_TRANSFER_DEPTH = 3
+    let depth = 0
+    let previousAgentId = director.agentId
+    while (result.agentId !== previousAgentId && depth < MAX_TRANSFER_DEPTH) {
+      previousAgentId = result.agentId
+      result = await this.sendMessage.execute({
+        tenantId: input.tenantId,
+        agentId: result.agentId,
+        message: input.message,
+        crewId: input.crewId,
+        conversationId: result.conversationId,
+        skipUserMessage: true,
+      })
+      depth++
+    }
 
     const durationMs = Date.now() - startTime
 

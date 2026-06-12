@@ -165,4 +165,46 @@ describe('SimulateCrewMessage', () => {
     expect(result.trace.outputTokens).toBeGreaterThanOrEqual(0)
     expect(result.trace.durationMs).toBeGreaterThanOrEqual(0)
   })
+
+  it('invokes new agent after transfer and uses its reply as final result', async () => {
+    crewMemberRepo.findAllByCrew.mockResolvedValue([
+      makeMember(AGENT_DIRECTOR_ID, 'DIRECTOR', 1),
+      makeMember(AGENT_MEMBER_ID, 'MEMBER', 2),
+    ])
+
+    // First call: SDR transfers to email agent (returns agentId = AGENT_MEMBER_ID)
+    // Second call: email agent responds (returns agentId = AGENT_MEMBER_ID, no further transfer)
+    sendMessage.execute
+      .mockResolvedValueOnce({
+        conversationId: 'conv-1',
+        messageId: 'msg-1',
+        reply: 'Um momento, estou transferindo você para o especialista adequado.',
+        model: 'gpt-4o-mini',
+        tokensUsed: 80,
+        isNewConversation: false,
+        agentId: AGENT_MEMBER_ID,
+      })
+      .mockResolvedValueOnce({
+        conversationId: 'conv-1',
+        messageId: 'msg-2',
+        reply: 'Olá! Sou o especialista em e-mail. Vou enviar as informações para você.',
+        model: 'gpt-4o-mini',
+        tokensUsed: 120,
+        isNewConversation: false,
+        agentId: AGENT_MEMBER_ID,
+      })
+
+    const result = await useCase.execute({
+      tenantId: TENANT_ID, crewId: CREW_ID, message: 'me envie por email', mode: 'SIMULATE',
+    })
+
+    expect(sendMessage.execute).toHaveBeenCalledTimes(2)
+    // Second call must skip user message persistence
+    expect(sendMessage.execute).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      agentId: AGENT_MEMBER_ID,
+      skipUserMessage: true,
+      conversationId: 'conv-1',
+    }))
+    expect(result.reply).toBe('Olá! Sou o especialista em e-mail. Vou enviar as informações para você.')
+  })
 })

@@ -22,6 +22,7 @@ type SendMessageInput = {
   conversationId?: string
   externalUserId?: string
   crewId?: string
+  skipUserMessage?: boolean
 }
 
 type SendMessageOutput = {
@@ -90,20 +91,22 @@ export class SendMessage {
     }))
 
     // 4. Persist USER message (after fetching history)
-    const userMessage = await this.repo.createMessage({
-      conversationId,
-      tenantId: input.tenantId,
-      role: MessageRole.USER,
-      content: input.message.trim(),
-    })
+    if (!input.skipUserMessage) {
+      const userMessage = await this.repo.createMessage({
+        conversationId,
+        tenantId: input.tenantId,
+        role: MessageRole.USER,
+        content: input.message.trim(),
+      })
 
-    realtimeService.publishEvent(input.tenantId, 'MESSAGE_RECEIVED', {
-      conversationId,
-      messageId: userMessage.id,
-      content: userMessage.content,
-      role: userMessage.role,
-      createdAt: userMessage.createdAt.toISOString(),
-    })
+      realtimeService.publishEvent(input.tenantId, 'MESSAGE_RECEIVED', {
+        conversationId,
+        messageId: userMessage.id,
+        content: userMessage.content,
+        role: userMessage.role,
+        createdAt: userMessage.createdAt.toISOString(),
+      })
+    }
 
     // 5. Load or create qualification state
     let qualState = await this.qualStateRepo.findByConversation(conversationId, input.tenantId)

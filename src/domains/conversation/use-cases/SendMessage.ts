@@ -243,8 +243,13 @@ export class SendMessage {
             try {
               const args = JSON.parse(tc.function.arguments)
               const { to, subject, body } = args
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
               if (!to || !subject || !body) {
                 console.warn('send_email tool called with missing required fields:', { to, subject, body })
+              } else if (!emailRegex.test(String(to))) {
+                // LLM hallucinated or guessed an invalid address — ask the lead for it
+                console.warn('send_email called with invalid email address:', to)
+                reply = 'Para enviar as informações, preciso do seu endereço de email. Poderia me informar?'
               } else if (this.emailDispatcher) {
                 const dispatchResult = await this.emailDispatcher.send({
                   tenantId: input.tenantId,
@@ -254,8 +259,9 @@ export class SendMessage {
                   metadata: { subject },
                 })
                 if (!dispatchResult.success) {
-                  // Override reply with explicit error message (user-configured behavior)
-                  reply = `Não foi possível enviar o email: ${dispatchResult.error ?? 'canal não configurado'}.`
+                  // Override reply — show friendly error, not raw provider message
+                  reply = 'Não foi possível enviar o email no momento. Por favor, tente novamente mais tarde ou entre em contato pelo telefone.'
+                  console.error('send_email dispatch failed:', dispatchResult.error)
                 }
                 // On success: keep the LLM's pre-generated reply.
                 // If the LLM returned only a tool call (no text), reply is "" and the

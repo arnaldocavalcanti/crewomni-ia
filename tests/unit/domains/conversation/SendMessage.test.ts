@@ -568,7 +568,8 @@ describe('SendMessage', () => {
     const result = await useCase.execute(makeInput())
 
     expect(result.reply).toContain('Não foi possível enviar o email')
-    expect(result.reply).toContain('MISSING_CREDENTIALS')
+    // Raw provider error must NOT be exposed to the user
+    expect(result.reply).not.toContain('MISSING_CREDENTIALS')
     const assistantCall = vi.mocked(repo.createMessage).mock.calls.find(
       (c) => c[0].role === MessageRole.ASSISTANT
     )
@@ -604,5 +605,38 @@ describe('SendMessage', () => {
     expect(emailDispatcher.send).not.toHaveBeenCalled()
     // Even when tool call is silently dropped, user should never see empty reply
     expect(result.reply.length).toBeGreaterThan(0)
+  })
+
+  it('deve pedir o email ao lead quando LLM fornecer endereço inválido na tool send_email', async () => {
+    const emailDispatcher = { send: vi.fn().mockResolvedValue({ success: true }) }
+    useCase = new SendMessage(
+      repo, ragContext as BuildRAGContext, auditLogger, qualStateRepo,
+      extractState as unknown as ExtractAndUpdateState,
+      crewMemberRepo, transferConversation, agentRepo,
+      undefined, undefined, undefined,
+      emailDispatcher,
+    )
+
+    vi.mocked(ragContext.execute).mockResolvedValue({
+      reply: '',
+      model: 'gpt-4o',
+      tokensUsed: 30,
+      chunksUsed: [],
+      toolCalls: [{
+        function: {
+          name: 'send_email',
+          arguments: JSON.stringify({
+            to: 'nao-é-um-email-valido',
+            subject: 'Apresentação',
+            body: 'Segue a apresentação.',
+          }),
+        },
+      }],
+    })
+
+    const result = await useCase.execute(makeInput())
+
+    expect(emailDispatcher.send).not.toHaveBeenCalled()
+    expect(result.reply).toContain('endereço de email')
   })
 })

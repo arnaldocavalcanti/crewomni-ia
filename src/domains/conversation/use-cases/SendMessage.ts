@@ -11,6 +11,7 @@ import type { TransferConversation } from './TransferConversation'
 import type { GetQualificationSchema } from '@/domains/qualification/use-cases/GetQualificationSchema'
 
 import type { IAgentRepository } from '@/domains/agent/repositories/IAgentRepository'
+import type { IChannelDispatcher } from '@/infrastructure/channel/IChannelDispatcher'
 
 const MAX_MESSAGES = 200
 const HISTORY_LIMIT = 20
@@ -48,6 +49,7 @@ export class SendMessage {
     private getQualificationSchema?: GetQualificationSchema,
     private checkUsageLimit?: { execute(input: { tenantId: string }): Promise<{ allowed: boolean; reason?: string }> },
     private recordUsage?: { execute(input: { tenantId: string, inputTokens: number, outputTokens: number, estimatedCostUsd: number }): Promise<void> },
+    private emailDispatcher?: IChannelDispatcher,
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageOutput> {
@@ -159,6 +161,27 @@ export class SendMessage {
       }
     }
 
+    // send_email is offered whenever the dispatcher is injected (crew or solo agent)
+    if (this.emailDispatcher) {
+      tools = tools ?? []
+      tools.push({
+        type: 'function',
+        function: {
+          name: 'send_email',
+          description: 'Envia um email para o lead com conteúdo gerado a partir do histórico da conversa.',
+          parameters: {
+            type: 'object',
+            properties: {
+              to:      { type: 'string', description: 'Endereço de email do destinatário.' },
+              subject: { type: 'string', description: 'Assunto do email.' },
+              body:    { type: 'string', description: 'Corpo do email em texto puro.' },
+            },
+            required: ['to', 'subject', 'body'],
+          },
+        },
+      })
+    }
+
     // 6. Check usage quota before calling LLM
     if (this.checkUsageLimit) {
       const usageResult = await this.checkUsageLimit.execute({ tenantId: input.tenantId })
@@ -216,6 +239,28 @@ export class SendMessage {
       const toolCalls = ragValue.toolCalls
       if (toolCalls && toolCalls.length > 0) {
         for (const tc of toolCalls) {
+          if (tc.function?.name === 'send_email') {
+            try {
+              const args = JSON.parse(tc.function.arguments)
+              const { to, subject, body } = args
+              if (to && subject && body && this.emailDispatcher) {
+                const dispatchResult = await this.emailDispatcher.send({
+                  tenantId: input.tenantId,
+                  conversationId,
+                  to,
+                  text: body,
+                  metadata: { subject },
+                })
+                if (!dispatchResult.success) {
+                  // Override reply with explicit error message (user-configured behavior)
+                  reply = `Não foi possível enviar o email: ${dispatchResult.error ?? 'canal não configurado'}.`
+                }
+                // On success: keep the LLM's pre-generated reply (global fallback below handles empty)
+              }
+            } catch (e) {
+              console.error('Failed to parse or execute send_email tool call:', e)
+            }
+          }
           if (tc.function?.name === 'transfer_conversation') {
             try {
               const args = JSON.parse(tc.function.arguments)

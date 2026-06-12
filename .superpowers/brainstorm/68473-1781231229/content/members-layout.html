@@ -1,0 +1,85 @@
+<h2>Seção "Membros da Crew" — Qual layout prefere?</h2>
+<p class="subtitle">A seção aparece na aba "Visão Geral" da página da crew, abaixo do formulário de edição.</p>
+
+<div class="cards">
+
+  <!-- Opção A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #0f172a; border-radius: 8px; font-family: monospace; font-size: 12px; color: #94a3b8;">
+      <div style="color: #e2e8f0; font-weight: 700; font-size: 13px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span>Membros da Equipe</span>
+        <span style="background: #4F6EF7; color: white; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer;">+ Adicionar Agente</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; background: #1e293b; padding: 10px 12px; border-radius: 8px; border-left: 3px solid #7C3AED;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; background: #7C3AED22; border: 1px solid #7C3AED55; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #7C3AED; font-size: 14px;">🤖</div>
+            <div>
+              <div style="color: #e2e8f0; font-size: 12px; font-weight: 600;">SDR Comercial Devolus</div>
+              <div style="color: #64748b; font-size: 10px;">SDR · Rascunho</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="background: #7C3AED22; color: #a78bfa; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;">🎯 DIRETOR</span>
+            <span style="color: #475569; cursor: pointer; font-size: 14px;">✕</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; background: #1e293b; padding: 10px 12px; border-radius: 8px; border-left: 3px solid #06C8E8;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; background: #06C8E822; border: 1px solid #06C8E855; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #06C8E8; font-size: 14px;">📧</div>
+            <div>
+              <div style="color: #e2e8f0; font-size: 12px; font-weight: 600;">Especialista em Email</div>
+              <div style="color: #64748b; font-size: 10px;">SUPPORT · Ativo</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="background: #06C8E822; color: #67e8f9; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;">MEMBRO</span>
+            <span style="color: #475569; cursor: pointer; font-size: 14px;">✕</span>
+          </div>
+        </div>
+        <div style="border: 1px dashed #334155; border-radius: 8px; padding: 10px; text-align: center; color: #475569; font-size: 11px; cursor: pointer;">
+          + Adicionar novo agente à equipe
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Lista vertical com roles em destaque</h3>
+      <p>Cada membro numa linha, border-left colorida por role, botão de remover inline. Botão "Adicionar" no topo direito. Compacto, escaneia rápido.</p>
+    </div>
+  </div>
+
+  <!-- Opção B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #0f172a; border-radius: 8px; font-size: 12px; color: #94a3b8;">
+      <div style="color: #e2e8f0; font-weight: 700; font-size: 13px; margin-bottom: 12px;">Membros da Equipe <span style="color: #64748b; font-weight: 400; font-size: 11px;">(2 agentes)</span></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <div style="background: #1e293b; border-radius: 8px; padding: 12px; border: 1px solid #7C3AED44;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="background: #7C3AED22; color: #a78bfa; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;">🎯 DIRETOR</span>
+            <span style="color: #475569; cursor: pointer; font-size: 12px;">✕</span>
+          </div>
+          <div style="font-size: 13px; font-weight: 600; color: #e2e8f0; margin-bottom: 2px;">SDR Comercial Devolus</div>
+          <div style="font-size: 10px; color: #64748b;">SDR · Rascunho</div>
+          <div style="font-size: 10px; color: #94a3b8; margin-top: 6px; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">Qualificação de leads por nicho imobiliário...</div>
+        </div>
+        <div style="background: #1e293b; border-radius: 8px; padding: 12px; border: 1px solid #06C8E844;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="background: #06C8E822; color: #67e8f9; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;">MEMBRO</span>
+            <span style="color: #475569; cursor: pointer; font-size: 12px;">✕</span>
+          </div>
+          <div style="font-size: 13px; font-weight: 600; color: #e2e8f0; margin-bottom: 2px;">Especialista em Email</div>
+          <div style="font-size: 10px; color: #64748b;">SUPPORT · Ativo</div>
+          <div style="font-size: 10px; color: #94a3b8; margin-top: 6px; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">Envia propostas e informações do produto por e-mail...</div>
+        </div>
+        <div style="background: #0f172a; border: 1px dashed #334155; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; grid-column: span 2;">
+          <span style="color: #4F6EF7; font-size: 12px; font-weight: 600;">+ Adicionar Agente à Crew</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Grid de cards 2 colunas</h3>
+      <p>Cada agente num card com descrição resumida. Mais visual, mostra mais contexto por agente. Cresce bem com mais membros.</p>
+    </div>
+  </div>
+
+</div>

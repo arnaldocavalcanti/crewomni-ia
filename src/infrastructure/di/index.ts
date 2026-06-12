@@ -244,9 +244,6 @@ const applyLifecycleTransition = new ApplyLifecycleTransition(conversationRepo, 
 const requestHumanHandoff = new RequestHumanHandoff(applyLifecycleTransition)
 const acceptHumanHandoff = new AcceptHumanHandoff(applyLifecycleTransition)
 
-// Now we can construct di.transferConversation with applyLifecycleTransition
-di.transferConversation = new TransferConversation(conversationRepo, crewMemberRepo, auditLogger, applyLifecycleTransition)
-
 // Distillation
 const runKDL = new RunKDL(kdlInsightRepo, conversationRepo, tenantRepo, llmProvider)
 const reviewKDLInsight = new ReviewKDLInsight(kdlInsightRepo, knowledgeRepo)
@@ -305,7 +302,7 @@ export const di = {
   listConversations:       new ListConversations(conversationRepo),
   getConversationMessages: new GetConversationMessages(conversationRepo),
   getConversationDetails:  new GetConversationDetails(conversationRepo, qualStateRepo, summaryRepo, lifecycleRepo),
-  transferConversation:    new TransferConversation(conversationRepo, crewMemberRepo, auditLogger, null as unknown as any),
+  transferConversation:    new TransferConversation(conversationRepo, crewMemberRepo, auditLogger, applyLifecycleTransition),
   operatorReply:           new OperatorReply(conversationRepo, auditLogger),
   sendMessage:             null as unknown as SendMessage,
   // Usage Limits

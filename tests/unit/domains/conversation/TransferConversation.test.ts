@@ -17,7 +17,8 @@ describe('TransferConversation Use Case', () => {
     conversationRepo = new InMemoryConversationRepository()
     crewMemberRepo = new InMemoryCrewMemberRepository()
     auditLogger = new ConsoleAuditLogger()
-    transferConversation = new TransferConversation(conversationRepo, crewMemberRepo, auditLogger)
+    const noopLifecycle = { execute: async () => {} } as any
+    transferConversation = new TransferConversation(conversationRepo, crewMemberRepo, auditLogger, noopLifecycle)
   })
 
   it('deve transferir a conversa para um novo agente válido da crew', async () => {

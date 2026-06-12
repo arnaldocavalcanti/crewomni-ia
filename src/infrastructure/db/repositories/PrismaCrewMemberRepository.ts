@@ -33,7 +33,9 @@ export class PrismaCrewMemberRepository implements ICrewMemberRepository {
 
   async findAllByCrew(crewId: string, tenantId: string): Promise<CrewMember[]> {
     const records = await this.db.crewMember.findMany({
-      where: { crewId, tenantId }, orderBy: { order: 'asc' },
+      where: { crewId, tenantId },
+      orderBy: { order: 'asc' },
+      include: { agent: { select: { name: true, type: true, status: true } } },
     })
     return records.map((r) => this.toEntity(r))
   }
@@ -60,6 +62,7 @@ export class PrismaCrewMemberRepository implements ICrewMemberRepository {
       id: r.id, tenantId: r.tenantId, crewId: r.crewId, agentId: r.agentId,
       role: r.role as CrewMemberRole, order: r.order, isRequired: r.isRequired,
       createdAt: r.createdAt,
+      ...(r.agent ? { agent: { name: r.agent.name, type: r.agent.type ?? undefined, status: r.agent.status ?? undefined } } : {}),
     }
   }
 }

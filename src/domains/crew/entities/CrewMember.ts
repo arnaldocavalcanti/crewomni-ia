@@ -13,6 +13,11 @@ export interface CrewMember {
   order:      number
   isRequired: boolean
   createdAt:  Date
+  agent?: {
+    name:   string
+    type?:  string
+    status?: string
+  }
 }
 
 export interface CreateCrewMemberData {

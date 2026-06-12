@@ -118,6 +118,7 @@ export function CrewMembersSection({ crewId, members, onRefresh }: Props) {
                   ) : (
                     <button
                       onClick={() => { setConfirmingId(m.id); setRemoveError(null) }}
+                      aria-label={`Remover ${m.agentName} da crew`}
                       className="text-muted-foreground hover:text-destructive transition-colors text-base leading-none px-1"
                       title="Remover da crew"
                     >
@@ -185,11 +186,11 @@ function AddMemberModal({ crewId, existingMemberAgentIds, hasDirector, onClose, 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" aria-labelledby="add-member-modal-title">
       <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-foreground">Adicionar Agente à Crew</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg leading-none">✕</button>
+          <h3 id="add-member-modal-title" className="text-base font-semibold text-foreground">Adicionar Agente à Crew</h3>
+          <button onClick={onClose} aria-label="Fechar" className="text-muted-foreground hover:text-foreground text-lg leading-none">✕</button>
         </div>
 
         {loadingAgents ? (
@@ -199,8 +200,9 @@ function AddMemberModal({ crewId, existingMemberAgentIds, hasDirector, onClose, 
         ) : (
           <>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Agente</label>
+              <label htmlFor="agent-select" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Agente</label>
               <select
+                id="agent-select"
                 value={selectedAgentId}
                 onChange={(e) => setSelectedAgentId(e.target.value)}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#4F6EF7]"

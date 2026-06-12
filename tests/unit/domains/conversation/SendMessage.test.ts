@@ -488,4 +488,109 @@ describe('SendMessage', () => {
     )
     expect(result.reply).toContain('transferindo')
   })
+
+  // ── send_email tool ───────────────────────────────────────────────────────
+
+  it('deve chamar emailDispatcher quando LLM acionar a tool send_email com sucesso', async () => {
+    const emailDispatcher = { send: vi.fn().mockResolvedValue({ success: true, providerId: 'msg-abc' }) }
+    useCase = new SendMessage(
+      repo, ragContext as BuildRAGContext, auditLogger, qualStateRepo,
+      extractState as unknown as ExtractAndUpdateState,
+      crewMemberRepo, transferConversation, agentRepo,
+      undefined, undefined, undefined,
+      emailDispatcher,
+    )
+
+    vi.mocked(ragContext.execute).mockResolvedValue({
+      reply: 'Enviei o email com o link do vídeo para você!',
+      model: 'gpt-4o',
+      tokensUsed: 80,
+      chunksUsed: [],
+      toolCalls: [{
+        function: {
+          name: 'send_email',
+          arguments: JSON.stringify({
+            to: 'lead@example.com',
+            subject: 'Vídeo App Devolus',
+            body: 'Segue o link do vídeo conforme combinado.',
+          }),
+        },
+      }],
+    })
+
+    const result = await useCase.execute(makeInput())
+
+    expect(emailDispatcher.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        to: 'lead@example.com',
+        text: 'Segue o link do vídeo conforme combinado.',
+        metadata: expect.objectContaining({ subject: 'Vídeo App Devolus' }),
+      })
+    )
+    expect(result.reply).toBe('Enviei o email com o link do vídeo para você!')
+  })
+
+  it('deve substituir reply por mensagem de erro quando emailDispatcher falhar', async () => {
+    const emailDispatcher = {
+      send: vi.fn().mockResolvedValue({ success: false, error: 'MISSING_CREDENTIALS' }),
+    }
+    useCase = new SendMessage(
+      repo, ragContext as BuildRAGContext, auditLogger, qualStateRepo,
+      extractState as unknown as ExtractAndUpdateState,
+      crewMemberRepo, transferConversation, agentRepo,
+      undefined, undefined, undefined,
+      emailDispatcher,
+    )
+
+    vi.mocked(ragContext.execute).mockResolvedValue({
+      reply: 'Já estou enviando o email!',
+      model: 'gpt-4o',
+      tokensUsed: 50,
+      chunksUsed: [],
+      toolCalls: [{
+        function: {
+          name: 'send_email',
+          arguments: JSON.stringify({
+            to: 'lead@example.com',
+            subject: 'Assunto',
+            body: 'Corpo',
+          }),
+        },
+      }],
+    })
+
+    const result = await useCase.execute(makeInput())
+
+    expect(result.reply).toContain('Não foi possível enviar o email')
+    expect(result.reply).toContain('MISSING_CREDENTIALS')
+  })
+
+  it('não deve chamar emailDispatcher quando parâmetros obrigatórios estiverem ausentes', async () => {
+    const emailDispatcher = { send: vi.fn().mockResolvedValue({ success: true }) }
+    useCase = new SendMessage(
+      repo, ragContext as BuildRAGContext, auditLogger, qualStateRepo,
+      extractState as unknown as ExtractAndUpdateState,
+      crewMemberRepo, transferConversation, agentRepo,
+      undefined, undefined, undefined,
+      emailDispatcher,
+    )
+
+    vi.mocked(ragContext.execute).mockResolvedValue({
+      reply: '',
+      model: 'gpt-4o',
+      tokensUsed: 30,
+      chunksUsed: [],
+      toolCalls: [{
+        function: {
+          name: 'send_email',
+          arguments: JSON.stringify({ subject: 'Assunto', body: 'Corpo' }), // missing 'to'
+        },
+      }],
+    })
+
+    await useCase.execute(makeInput())
+
+    expect(emailDispatcher.send).not.toHaveBeenCalled()
+  })
 })

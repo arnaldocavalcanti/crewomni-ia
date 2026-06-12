@@ -12,13 +12,7 @@ import { ArrowLeft, Hash } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import VisualWorkflowBuilder from '@/components/crews/VisualWorkflowBuilder'
 import { CrewTestLab } from '@/components/crews/test-lab/CrewTestLab'
-
-type CrewMember = {
-  id: string
-  agentId: string
-  agentName: string
-  role: 'DIRECTOR' | 'MEMBER' | 'OBSERVER'
-}
+import { CrewMembersSection, type CrewMember } from '@/components/crews/CrewMembersSection'
 
 function toSlug(name: string): string {
   return name
@@ -279,6 +273,8 @@ export default function EditCrewPage() {
               </Button>
             </div>
           </form>
+
+          <CrewMembersSection crewId={id as string} members={members} onRefresh={loadCrew} />
 
           <div className="pt-8 mt-8 border-t border-border">
             <VisualWorkflowBuilder crewId={id as string} />

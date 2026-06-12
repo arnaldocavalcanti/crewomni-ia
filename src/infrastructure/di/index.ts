@@ -355,6 +355,7 @@ di.sendMessage = new SendMessage(
   getQualificationSchema,
   di.checkUsageLimit,
   di.recordUsage,
+  new EmailDispatcher(channelConfigRepo),
 )
 
 di.simulateCrewMessage = new SimulateCrewMessage(

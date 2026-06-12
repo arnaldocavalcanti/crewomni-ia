@@ -529,6 +529,11 @@ describe('SendMessage', () => {
       })
     )
     expect(result.reply).toBe('Enviei o email com o link do vídeo para você!')
+    const assistantCall = vi.mocked(repo.createMessage).mock.calls.find(
+      (c) => c[0].role === MessageRole.ASSISTANT
+    )
+    expect(assistantCall).toBeDefined()
+    expect(assistantCall![0].content).toBe('Enviei o email com o link do vídeo para você!')
   })
 
   it('deve substituir reply por mensagem de erro quando emailDispatcher falhar', async () => {
@@ -564,6 +569,11 @@ describe('SendMessage', () => {
 
     expect(result.reply).toContain('Não foi possível enviar o email')
     expect(result.reply).toContain('MISSING_CREDENTIALS')
+    const assistantCall = vi.mocked(repo.createMessage).mock.calls.find(
+      (c) => c[0].role === MessageRole.ASSISTANT
+    )
+    expect(assistantCall).toBeDefined()
+    expect(assistantCall![0].content).toContain('Não foi possível enviar o email')
   })
 
   it('não deve chamar emailDispatcher quando parâmetros obrigatórios estiverem ausentes', async () => {
@@ -589,8 +599,10 @@ describe('SendMessage', () => {
       }],
     })
 
-    await useCase.execute(makeInput())
+    const result = await useCase.execute(makeInput())
 
     expect(emailDispatcher.send).not.toHaveBeenCalled()
+    // Even when tool call is silently dropped, user should never see empty reply
+    expect(result.reply.length).toBeGreaterThan(0)
   })
 })

@@ -377,7 +377,7 @@ model Message {
 // ─── Human Handoff ────────────────────────────────────────────────────────────
 
 model HumanHandoff {
-  id             String    @id @default(cuid())
+  id             String    @id @default(uuid())
   tenantId       String
   conversationId String    @unique
   reason         String
@@ -387,7 +387,7 @@ model HumanHandoff {
   webhookSentAt  DateTime?
   createdAt      DateTime  @default(now())
 
-  conversation Conversation @relation(fields: [conversationId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@map("human_handoffs")

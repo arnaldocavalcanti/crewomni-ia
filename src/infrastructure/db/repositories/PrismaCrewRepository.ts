@@ -54,6 +54,7 @@ export class PrismaCrewRepository implements ICrewRepository {
     return {
       id: r.id, tenantId: r.tenantId, departmentId: r.departmentId,
       name: r.name, slug: r.slug, description: r.description, objective: r.objective,
+      humanHandoffWhatsappNumber: r.humanHandoffWhatsappNumber ?? null, humanHandoffWebhookUrl: r.humanHandoffWebhookUrl ?? null,
       status: r.status as CrewStatus, createdAt: r.createdAt, updatedAt: r.updatedAt,
     }
   }

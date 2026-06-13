@@ -3,12 +3,14 @@ import { UpdateCrew } from '@/domains/crew/use-cases/UpdateCrew'
 import type { ICrewRepository } from '@/domains/crew/repositories/ICrewRepository'
 import type { IAuditLogger } from '@/shared/types/IAuditLogger'
 import { CrewStatus } from '@/domains/crew/entities/Crew'
+import type { Crew } from '@/domains/crew/entities/Crew'
 
-function makeCrew(overrides = {}) {
+function makeCrew(overrides: Partial<Crew> = {}): Crew {
   return {
     id: 'crew-1', tenantId: 'tenant-1', departmentId: 'dept-1',
     name: 'Comercial IA', slug: 'comercial-ia', description: null,
-    objective: null, status: CrewStatus.DRAFT, createdAt: new Date(), updatedAt: new Date(),
+    objective: null, humanHandoffWhatsappNumber: null, humanHandoffWebhookUrl: null,
+    status: CrewStatus.DRAFT, createdAt: new Date(), updatedAt: new Date(),
     ...overrides,
   }
 }

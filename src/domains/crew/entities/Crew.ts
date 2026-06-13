@@ -11,8 +11,10 @@ export interface Crew {
   name:         string
   slug:         string
   description:  string | null
-  objective:    string | null
-  status:       CrewStatus
+  objective:                  string | null
+  humanHandoffWhatsappNumber: string | null
+  humanHandoffWebhookUrl:     string | null
+  status:                     CrewStatus
   createdAt:    Date
   updatedAt:    Date
 }

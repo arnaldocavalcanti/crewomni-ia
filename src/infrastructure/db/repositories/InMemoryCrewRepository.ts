@@ -14,8 +14,10 @@ export class InMemoryCrewRepository implements ICrewRepository {
       name:         data.name,
       slug:         data.slug,
       description:  data.description ?? null,
-      objective:    data.objective ?? null,
-      status:       CrewStatus.DRAFT,
+      objective:                  data.objective ?? null,
+      humanHandoffWhatsappNumber: null,
+      humanHandoffWebhookUrl:     null,
+      status:                     CrewStatus.DRAFT,
       createdAt:    new Date(),
       updatedAt:    new Date(),
     }

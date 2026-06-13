@@ -292,14 +292,14 @@ export class SendMessage {
                   text: body,
                   metadata: { subject },
                 })
-                if (!dispatchResult.success) {
-                  // Override reply — show friendly error, not raw provider message
+                if (dispatchResult.success) {
+                  if (!reply) {
+                    reply = 'Sua solicitação foi enviada por e-mail com sucesso para a nossa equipe!'
+                  }
+                } else {
                   reply = 'Não foi possível enviar o email no momento. Por favor, tente novamente mais tarde ou entre em contato pelo telefone.'
                   console.error('send_email dispatch failed:', dispatchResult.error)
                 }
-                // On success: keep the LLM's pre-generated reply.
-                // If the LLM returned only a tool call (no text), reply is "" and the
-                // global fallback below will fire — that is intentional.
               }
             } catch (e) {
               console.error('Failed to parse or execute send_email tool call:', e)

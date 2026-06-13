@@ -99,20 +99,33 @@ export class AcceptHumanHandoff {
     let webhookSentAt: Date | null = null
 
     if (contactPhone) {
-      await this.whatsappDispatcher.send({
+      const customerDispatch = await this.whatsappDispatcher.send({
         tenantId: input.tenantId,
         to: contactPhone,
         text: `Você foi transferido para a equipe ${crew.name}. Nossa equipe entrará em contato em breve via WhatsApp.`,
       })
-      waSentAt = now
+      if (customerDispatch.success) {
+        waSentAt = now
+      } else {
+        console.warn('[AcceptHumanHandoff] Customer WA notification failed:', customerDispatch.error)
+      }
     }
 
-    // Always notify the crew bot
-    await this.whatsappDispatcher.send({
+    // Always notify the crew bot — critical: if this fails, the crew won't know about the handoff
+    const botDispatch = await this.whatsappDispatcher.send({
       tenantId: input.tenantId,
       to: botNumber,
       text: `HANDOFF\nCliente: ${contactPhone ?? 'não informado'}\nCrew: ${crew.name}\nMotivo: ${reason}\n\nÚltimas mensagens:\n${transcript}`,
     })
+    if (!botDispatch.success) {
+      const isConfigError = botDispatch.error === 'CHANNEL_NOT_CONFIGURED' || botDispatch.error === 'MISSING_CREDENTIALS'
+      throw new AppError(
+        'HANDOFF_DISPATCH_FAILED',
+        isConfigError
+          ? 'Canal WhatsApp não configurado para este tenant. Configure as credenciais da Meta API em Configurações > Canais antes de usar o handoff humano.'
+          : `Falha ao notificar equipe via WhatsApp: ${botDispatch.error}`,
+      )
+    }
 
     // Optional webhook — SSRF guard: DNS-resolved IP must not be in any private range
     if (crew.humanHandoffWebhookUrl && await isSafeWebhookUrl(crew.humanHandoffWebhookUrl)) {

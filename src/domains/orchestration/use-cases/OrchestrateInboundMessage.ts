@@ -77,7 +77,7 @@ export class OrchestrateInboundMessage {
       })
 
       const text = event.normalizedPayload?.text ?? ''
-      const agentId = (event.rawPayload['agentId'] as string) ?? 'agent-default'
+      const agentId = (event.rawPayload['agentId'] as string) ?? existingConv?.agentId ?? 'agent-default'
       const crewId = (event.rawPayload['crewId'] as string) ?? existingConv?.crewId
 
       let result: any

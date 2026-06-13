@@ -7,6 +7,24 @@ import type { IHumanHandoffRepository } from '../repositories/IHumanHandoffRepos
 import type { IChannelDispatcher } from '@/infrastructure/channel/IChannelDispatcher'
 import { MessageRole } from '../entities/Conversation'
 
+// SSRF guard: only allow HTTPS to non-private/loopback addresses
+function isSafeWebhookUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw)
+    if (url.protocol !== 'https:') return false
+    const host = url.hostname
+    // Reject loopback, link-local, private RFC1918 ranges
+    if (/^(localhost|127\.|0\.0\.0\.0|::1)/.test(host)) return false
+    if (/^10\./.test(host)) return false
+    if (/^192\.168\./.test(host)) return false
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false
+    if (/^169\.254\./.test(host)) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
 type AcceptHumanHandoffInput = {
   tenantId: string
   conversationId: string
@@ -82,8 +100,8 @@ export class AcceptHumanHandoff {
       text: `HANDOFF\nCliente: ${contactPhone ?? 'não informado'}\nCrew: ${crew.name}\nMotivo: ${reason}\n\nÚltimas mensagens:\n${transcript}`,
     })
 
-    // Optional webhook
-    if (crew.humanHandoffWebhookUrl) {
+    // Optional webhook — SSRF guard: only allow HTTPS to non-private addresses
+    if (crew.humanHandoffWebhookUrl && isSafeWebhookUrl(crew.humanHandoffWebhookUrl)) {
       const payload = {
         contactPhone,
         crewName: crew.name,
@@ -100,6 +118,7 @@ export class AcceptHumanHandoff {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
+          redirect: 'manual',
         })
         webhookSentAt = new Date()
       } catch (e) {

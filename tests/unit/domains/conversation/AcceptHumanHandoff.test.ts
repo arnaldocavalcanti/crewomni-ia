@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { AcceptHumanHandoff } from '@/domains/conversation/use-cases/AcceptHumanHandoff'
 import { ConversationStatus, MessageRole } from '@/domains/conversation/entities/Conversation'
 import type { IConversationRepository } from '@/domains/conversation/repositories/IConversationRepository'
@@ -213,5 +213,14 @@ describe('AcceptHumanHandoff', () => {
     await expect(
       useCase.execute({ tenantId: 'tenant-1', conversationId: 'conv-1' })
     ).rejects.toThrow('HUMAN_HANDOFF_NOT_CONFIGURED')
+  })
+
+  it('lança erro quando conversa não é encontrada', async () => {
+    const { useCase, conversationRepo } = makeSut()
+    ;(conversationRepo.findConversationById as ReturnType<typeof vi.fn>).mockResolvedValue(null)
+
+    await expect(
+      useCase.execute({ tenantId: 'tenant-1', conversationId: 'conv-x' })
+    ).rejects.toThrow('Conversa não encontrada.')
   })
 })

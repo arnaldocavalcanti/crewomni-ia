@@ -323,6 +323,7 @@ enum ConversationStatus {
   HANDOFF_ACCEPTED
   REOPENED
   ARCHIVED
+  TRANSFERRED_TO_HUMAN
 }
 
 enum MessageRole {
@@ -348,6 +349,7 @@ model Conversation {
   crew     Crew?     @relation(fields: [crewId], references: [id], onDelete: Cascade)
   messages Message[]
   lifecycleEvents ConversationLifecycleEvent[]
+  humanHandoff HumanHandoff?
 
   @@index([tenantId])
   @@index([tenantId, agentId])
@@ -370,6 +372,25 @@ model Message {
   @@index([conversationId])
   @@index([tenantId])
   @@map("messages")
+}
+
+// ─── Human Handoff ────────────────────────────────────────────────────────────
+
+model HumanHandoff {
+  id             String    @id @default(cuid())
+  tenantId       String
+  conversationId String    @unique
+  reason         String
+  contactPhone   String?
+  webhookSent    Boolean   @default(false)
+  waSentAt       DateTime?
+  webhookSentAt  DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([tenantId])
+  @@map("human_handoffs")
 }
 
 // ─── Organization ─────────────────────────────────────────────────────────────
@@ -422,6 +443,8 @@ model Crew {
   description  String?
   objective    String?
   status       CrewStatus @default(DRAFT)
+  humanHandoffWhatsappNumber String?
+  humanHandoffWebhookUrl     String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 

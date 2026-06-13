@@ -1,6 +1,7 @@
 export enum ConversationStatus {
-  OPEN   = 'OPEN',
-  CLOSED = 'CLOSED',
+  OPEN                 = 'OPEN',
+  CLOSED               = 'CLOSED',
+  TRANSFERRED_TO_HUMAN = 'TRANSFERRED_TO_HUMAN',
 }
 
 export enum MessageRole {

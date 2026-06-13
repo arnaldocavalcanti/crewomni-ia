@@ -34,4 +34,6 @@ export interface UpdateCrewData {
   description?: string
   objective?:   string
   status?:      CrewStatus
+  humanHandoffWhatsappNumber?: string | null
+  humanHandoffWebhookUrl?:     string | null
 }

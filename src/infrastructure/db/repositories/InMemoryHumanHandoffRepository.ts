@@ -16,4 +16,8 @@ export class InMemoryHumanHandoffRepository implements IHumanHandoffRepository {
   async findByConversationId(conversationId: string, tenantId: string): Promise<HumanHandoff | null> {
     return this.store.find((h) => h.conversationId === conversationId && h.tenantId === tenantId) ?? null
   }
+
+  clear(): void {
+    this.store = []
+  }
 }

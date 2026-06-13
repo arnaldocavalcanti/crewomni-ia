@@ -1,4 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
+
+// Mock dns.promises.lookup so isSafeWebhookUrl passes in unit tests without real DNS
+vi.mock('dns', () => ({
+  promises: {
+    lookup: vi.fn().mockResolvedValue([{ address: '203.0.113.1', family: 4 }]),
+  },
+}))
 import { AcceptHumanHandoff } from '@/domains/conversation/use-cases/AcceptHumanHandoff'
 import { ConversationStatus, MessageRole } from '@/domains/conversation/entities/Conversation'
 import type { IConversationRepository } from '@/domains/conversation/repositories/IConversationRepository'

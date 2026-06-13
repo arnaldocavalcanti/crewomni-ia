@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { promises as dns } from 'dns'
 import { AppError } from '@/shared/errors/AppError'
 import type { IConversationRepository } from '../repositories/IConversationRepository'
 import type { ICrewRepository } from '@/domains/crew/repositories/ICrewRepository'
@@ -7,18 +8,31 @@ import type { IHumanHandoffRepository } from '../repositories/IHumanHandoffRepos
 import type { IChannelDispatcher } from '@/infrastructure/channel/IChannelDispatcher'
 import { MessageRole } from '../entities/Conversation'
 
-// SSRF guard: only allow HTTPS to non-private/loopback addresses
-function isSafeWebhookUrl(raw: string): boolean {
+// SSRF guard: resolve DNS and reject if any resolved IP is in a private range.
+// Regex-only hostname checks are bypassable via DNS rebinding (e.g. attacker.com → 10.0.0.1).
+function isPrivateIP(ip: string): boolean {
+  // IPv6 loopback
+  if (ip === '::1' || ip === '0:0:0:0:0:0:0:1') return true
+  const parts = ip.split('.').map(Number)
+  if (parts.length !== 4 || parts.some(isNaN)) return false
+  const [a, b] = parts
+  return (
+    a === 10 ||
+    a === 127 ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 169 && b === 254) ||
+    a === 0
+  )
+}
+
+async function isSafeWebhookUrl(raw: string): Promise<boolean> {
   try {
     const url = new URL(raw)
     if (url.protocol !== 'https:') return false
-    const host = url.hostname
-    // Reject loopback, link-local, private RFC1918 ranges
-    if (/^(localhost|127\.|0\.0\.0\.0|::1)/.test(host)) return false
-    if (/^10\./.test(host)) return false
-    if (/^192\.168\./.test(host)) return false
-    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false
-    if (/^169\.254\./.test(host)) return false
+    const host = url.hostname.toLowerCase().replace(/\.$/, '')
+    const addresses = await dns.lookup(host, { all: true })
+    if (addresses.some((a) => isPrivateIP(a.address))) return false
     return true
   } catch {
     return false
@@ -100,8 +114,8 @@ export class AcceptHumanHandoff {
       text: `HANDOFF\nCliente: ${contactPhone ?? 'não informado'}\nCrew: ${crew.name}\nMotivo: ${reason}\n\nÚltimas mensagens:\n${transcript}`,
     })
 
-    // Optional webhook — SSRF guard: only allow HTTPS to non-private addresses
-    if (crew.humanHandoffWebhookUrl && isSafeWebhookUrl(crew.humanHandoffWebhookUrl)) {
+    // Optional webhook — SSRF guard: DNS-resolved IP must not be in any private range
+    if (crew.humanHandoffWebhookUrl && await isSafeWebhookUrl(crew.humanHandoffWebhookUrl)) {
       const payload = {
         contactPhone,
         crewName: crew.name,

@@ -350,7 +350,11 @@ export class SendMessage {
 
       // Never persist an empty reply — LLM may return only tool calls with no text content
       if (!reply) {
-        reply = 'Estou processando sua solicitação, aguarde um momento.'
+        if (humanHandoffSuggestion) {
+          reply = 'Perfeito. Para que possamos te ajudar melhor, gostaria de continuar o atendimento com um de nossos atendentes?'
+        } else {
+          reply = 'Estou processando sua solicitação, aguarde um momento.'
+        }
       }
     } else {
       failed = true

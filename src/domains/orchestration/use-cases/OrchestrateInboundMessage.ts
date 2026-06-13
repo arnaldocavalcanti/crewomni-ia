@@ -115,6 +115,7 @@ export class OrchestrateInboundMessage {
           message: text,
           conversationId: existingConv?.id,
           externalUserId: contact.id,
+          crewId: crewId ?? undefined,
         })
       }
 

@@ -98,7 +98,8 @@ export class BuildRAGContext {
     const trimmedAgent = applyBudget(agentChunks, TOKEN_BUDGET.AGENT)
 
     // 7. Build system prompt (ADR 004 format)
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, trimmedTenant, trimmedAgent, input.qualificationState, input.qualificationSchema, input.crewMembers, input.conversationHistory)
+    const hasHumanHandoff = (input.tools ?? []).some((t: any) => t?.function?.name === 'suggest_human_handoff')
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, trimmedTenant, trimmedAgent, input.qualificationState, input.qualificationSchema, input.crewMembers, input.conversationHistory, hasHumanHandoff)
 
     // 8. Build messages array: history + current message
     const history = input.conversationHistory ?? []
@@ -166,7 +167,8 @@ function buildSystemPrompt(
   qualificationState?: QualificationState,
   qualificationSchema?: QualificationSchema,
   crewMembers?: { role: string; agentSlug: string; agentName: string; agentId: string; description?: string; operationalFunction?: string }[],
-  conversationHistory?: { role: 'user' | 'assistant'; content: string }[]
+  conversationHistory?: { role: 'user' | 'assistant'; content: string }[],
+  hasHumanHandoff?: boolean,
 ): string {
   const parts: string[] = [base]
 
@@ -229,6 +231,9 @@ function buildSystemPrompt(
     parts.push('2. Não tente processar, responder ou coletar mais informações para solicitações fora de sua especialidade se houver um agente mais adequado na equipe.')
     parts.push('3. Para transferir, use a tool "transfer_conversation" informando o targetAgentSlug do agente de destino.')
     parts.push('4. Você NÃO deve transferir a conversa para si mesmo (o seu próprio slug não estará na lista de equipe acima). Se a solicitação do usuário estiver alinhada com a sua própria especialidade/descrição, processe a solicitação e responda diretamente.')
+    if (hasHumanHandoff) {
+      parts.push('5. ATENDIMENTO HUMANO (regra prioritária): Se o cliente solicitar explicitamente falar com um atendente humano, consultor, operador, pessoa real ou equivalente — por exemplo: "quero falar com uma pessoa", "falar com atendente", "quero um consultor", "falar com humano", "atendente humano" — use IMEDIATAMENTE a tool "suggest_human_handoff". NUNCA use "transfer_conversation" para esse caso. A "transfer_conversation" é exclusivamente para rotear para outros agentes de IA da equipe, jamais para pedidos de atendimento humano.')
+    }
     parts.push('')
   }
 

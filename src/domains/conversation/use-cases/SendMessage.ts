@@ -181,7 +181,7 @@ export class SendMessage {
           type: 'function',
           function: {
             name: 'suggest_human_handoff',
-            description: 'Use quando o cliente precisar de atendimento humano especializado que vai além da sua capacidade.',
+            description: 'Use quando o cliente solicitar EXPLICITAMENTE falar com um atendente humano, consultor, operador ou pessoa real (ex: "quero falar com uma pessoa", "falar com atendente", "quero um consultor", "atendente humano"). Tem prioridade sobre "transfer_conversation" nesses casos. NÃO use para assuntos que outro agente de IA pode resolver.',
             parameters: {
               type: 'object',
               properties: {
@@ -316,11 +316,13 @@ export class SendMessage {
                     m.agentName.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase()
                   )
                 if (targetMember) {
-                  await this.transferConversation.execute({
+                  const transferred = await this.transferConversation.execute({
                     tenantId: input.tenantId,
                     conversationId,
                     targetAgentId: targetMember.agentId,
                   })
+                  // Update local agentId so SimulateCrewMessage's loop detects the transfer
+                  conversation.agentId = transferred.agentId
                   if (!reply) {
                     reply = `Um momento, estou transferindo você para o especialista adequado.`
                   }

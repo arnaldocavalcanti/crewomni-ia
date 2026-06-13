@@ -640,3 +640,73 @@ describe('SendMessage', () => {
     expect(result.reply).toContain('endereço de email')
   })
 })
+
+describe('SendMessage — TRANSFERRED_TO_HUMAN guard', () => {
+  it('lança CONVERSATION_TRANSFERRED quando status é TRANSFERRED_TO_HUMAN', async () => {
+    const repo = makeRepo()
+    ;(repo.findConversationById as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeConversation({ status: ConversationStatus.TRANSFERRED_TO_HUMAN })
+    )
+
+    const uc = new SendMessage(
+      repo,
+      makeRAG() as any,
+      { log: vi.fn() } as any,
+      makeQualStateRepo(),
+      { execute: vi.fn().mockResolvedValue({ newState: makeQualState() }) } as any,
+      { findAllByCrew: vi.fn().mockResolvedValue([]) } as any,
+      { execute: vi.fn() } as any,
+      { findById: vi.fn() } as any,
+    )
+
+    await expect(uc.execute(makeInput({ conversationId: 'conv-1' }))).rejects.toThrow('Esta conversa foi transferida para atendimento humano.')
+  })
+})
+
+describe('SendMessage — suggest_human_handoff tool', () => {
+  it('inclui humanHandoffSuggestion quando agente chama a tool', async () => {
+    const repo = makeRepo()
+    ;(repo.findConversationById as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeConversation({ crewId: 'crew-1' })
+    )
+    const rag = makeRAG()
+    ;(rag.execute as ReturnType<typeof vi.fn>).mockResolvedValue({
+      reply: 'Vou transferir para um humano.',
+      model: 'gpt-4o-mini',
+      tokensUsed: 50,
+      chunksUsed: [],
+      toolCalls: [
+        {
+          function: {
+            name: 'suggest_human_handoff',
+            arguments: JSON.stringify({ reason: 'Caso complexo' }),
+          },
+        },
+      ],
+    })
+
+    const suggestHumanHandoff = {
+      execute: vi.fn().mockResolvedValue({ canSuggest: true, crewName: 'Suporte Premium', reason: 'Caso complexo' }),
+    }
+
+    const uc = new SendMessage(
+      repo,
+      rag as any,
+      { log: vi.fn() } as any,
+      makeQualStateRepo(),
+      { execute: vi.fn().mockResolvedValue({ newState: makeQualState() }) } as any,
+      { findAllByCrew: vi.fn().mockResolvedValue([]) } as any,
+      { execute: vi.fn() } as any,
+      { findById: vi.fn() } as any,
+      undefined, // getQualificationSchema
+      undefined, // checkUsageLimit
+      undefined, // recordUsage
+      undefined, // emailDispatcher
+      suggestHumanHandoff as any,
+    )
+
+    const result = await uc.execute(makeInput({ conversationId: 'conv-1', crewId: 'crew-1' }))
+
+    expect(result.humanHandoffSuggestion).toEqual({ reason: 'Caso complexo', crewName: 'Suporte Premium' })
+  })
+})

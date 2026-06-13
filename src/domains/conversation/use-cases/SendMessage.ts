@@ -12,6 +12,7 @@ import type { GetQualificationSchema } from '@/domains/qualification/use-cases/G
 
 import type { IAgentRepository } from '@/domains/agent/repositories/IAgentRepository'
 import type { IChannelDispatcher } from '@/infrastructure/channel/IChannelDispatcher'
+import type { SuggestHumanHandoff } from './SuggestHumanHandoff'
 
 const MAX_MESSAGES = 200
 const HISTORY_LIMIT = 20
@@ -34,6 +35,7 @@ type SendMessageOutput = {
   tokensUsed: number
   isNewConversation: boolean
   agentId: string
+  humanHandoffSuggestion?: { reason: string; crewName: string }
 }
 
 export class SendMessage {
@@ -50,6 +52,7 @@ export class SendMessage {
     private checkUsageLimit?: { execute(input: { tenantId: string }): Promise<{ allowed: boolean; reason?: string }> },
     private recordUsage?: { execute(input: { tenantId: string, inputTokens: number, outputTokens: number, estimatedCostUsd: number }): Promise<void> },
     private emailDispatcher?: IChannelDispatcher,
+    private suggestHumanHandoff?: SuggestHumanHandoff,
   ) {}
 
   async execute(input: SendMessageInput): Promise<SendMessageOutput> {
@@ -70,6 +73,10 @@ export class SendMessage {
 
     if (conversation?.status === ConversationStatus.CLOSED) {
       throw new AppError('CONVERSATION_CLOSED', 'Esta conversa já foi encerrada.')
+    }
+
+    if (conversation?.status === ConversationStatus.TRANSFERRED_TO_HUMAN) {
+      throw new AppError('CONVERSATION_TRANSFERRED', 'Esta conversa foi transferida para atendimento humano.')
     }
 
     if (!conversation) {
@@ -161,6 +168,32 @@ export class SendMessage {
       }
     }
 
+    // suggest_human_handoff: offered only when crew has a human handoff number configured
+    if (crewId && this.suggestHumanHandoff) {
+      const suggestion = await this.suggestHumanHandoff.execute({
+        tenantId: input.tenantId,
+        crewId,
+        reason: '',
+      })
+      if (suggestion.canSuggest) {
+        tools = tools ?? []
+        tools.push({
+          type: 'function',
+          function: {
+            name: 'suggest_human_handoff',
+            description: 'Use quando o cliente precisar de atendimento humano especializado que vai além da sua capacidade.',
+            parameters: {
+              type: 'object',
+              properties: {
+                reason: { type: 'string', description: 'Por que está sugerindo a transferência.' },
+              },
+              required: ['reason'],
+            },
+          },
+        })
+      }
+    }
+
     // send_email is offered whenever the dispatcher is injected (crew or solo agent)
     if (this.emailDispatcher) {
       tools = tools ?? []
@@ -196,6 +229,7 @@ export class SendMessage {
     let tokensUsed = 0
     let chunksUsed: { layer: string; count: number; totalScore: number }[] = []
     let failed = false
+    let humanHandoffSuggestion: { reason: string; crewName: string } | undefined = undefined
 
     const schema = this.getQualificationSchema
       ? await this.getQualificationSchema.execute({
@@ -296,6 +330,21 @@ export class SendMessage {
               console.error('Failed to parse or execute transfer tool call:', e)
             }
           }
+          if (tc.function?.name === 'suggest_human_handoff' && this.suggestHumanHandoff && crewId) {
+            try {
+              const args = JSON.parse(tc.function.arguments)
+              const suggestion = await this.suggestHumanHandoff.execute({
+                tenantId: input.tenantId,
+                crewId,
+                reason: args.reason ?? '',
+              })
+              if (suggestion.canSuggest) {
+                humanHandoffSuggestion = { reason: args.reason ?? '', crewName: suggestion.crewName }
+              }
+            } catch (e) {
+              console.error('Failed to process suggest_human_handoff tool call:', e)
+            }
+          }
         }
       }
 
@@ -356,6 +405,7 @@ export class SendMessage {
       tokensUsed,
       isNewConversation,
       agentId: conversation.agentId,
+      humanHandoffSuggestion,
     }
   }
 }

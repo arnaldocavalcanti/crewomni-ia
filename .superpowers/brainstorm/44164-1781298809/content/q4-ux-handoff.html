@@ -1,0 +1,71 @@
+<h2>Pergunta 4: Como aparece a sugestão de transferência no chat?</h2>
+<p class="subtitle">Como o agente presenta a opção ao cliente — e como o cliente aceita?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a;padding:16px;border-radius:8px 8px 0 0">
+      <!-- Mockup A: Cartão rico -->
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:280px;margin:0 auto">
+        <div style="background:#1e293b;border-radius:8px;padding:12px;font-size:12px;color:#94a3b8">
+          Parece que sua dúvida precisa de uma atenção especializada. Posso transferir você para nossa equipe humana de suporte.
+        </div>
+        <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:10px;padding:12px;color:#fff">
+          <div style="font-size:11px;color:#60a5fa;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Transferência para Humano</div>
+          <div style="font-size:12px;margin-bottom:10px;color:#e2e8f0">Um especialista da equipe Suporte Premium continuará te ajudando via WhatsApp.</div>
+          <div style="display:flex;gap:8px">
+            <button style="flex:1;background:#3b82f6;border:none;color:#fff;padding:7px;border-radius:6px;font-size:11px;cursor:pointer">✓ Aceitar</button>
+            <button style="flex:1;background:#374151;border:none;color:#94a3b8;padding:7px;border-radius:6px;font-size:11px;cursor:pointer">Continuar aqui</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Cartão rico no chat</h3>
+      <p>Agente envia um cartão especial com botões de aceitar/recusar. UX clara e destacada.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a;padding:16px;border-radius:8px 8px 0 0">
+      <!-- Mockup B: Modal overlay -->
+      <div style="position:relative;max-width:280px;margin:0 auto">
+        <div style="background:#1e293b;border-radius:8px;padding:12px;font-size:12px;color:#94a3b8;opacity:0.5">
+          Parece que sua dúvida precisa de atenção especializada...
+        </div>
+        <div style="margin-top:8px;background:#0f172a;border:1px solid #3b82f6;border-radius:12px;padding:16px;box-shadow:0 0 24px rgba(59,130,246,0.3)">
+          <div style="font-size:13px;font-weight:600;color:#fff;margin-bottom:8px">Transferir para equipe humana?</div>
+          <div style="font-size:11px;color:#94a3b8;margin-bottom:12px">Crew: Suporte Premium<br>Canal: WhatsApp Business<br>Tempo estimado: ~2 min</div>
+          <div style="display:flex;gap:8px">
+            <button style="flex:1;background:#3b82f6;border:none;color:#fff;padding:8px;border-radius:6px;font-size:11px">Aceitar transferência</button>
+            <button style="flex:1;background:transparent;border:1px solid #374151;color:#94a3b8;padding:8px;border-radius:6px;font-size:11px">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Modal de confirmação</h3>
+      <p>Um modal aparece sobre o chat quando o agente sugere a transferência. Mais formal e explícito.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a;padding:16px;border-radius:8px 8px 0 0">
+      <!-- Mockup C: Quick replies inline -->
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:280px;margin:0 auto">
+        <div style="background:#1e293b;border-radius:8px;padding:12px;font-size:12px;color:#94a3b8">
+          Posso te transferir para um especialista humano via WhatsApp. Deseja prosseguir?
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button style="background:#1e3a5f;border:1px solid #3b82f6;color:#60a5fa;padding:7px 14px;border-radius:20px;font-size:11px;cursor:pointer">👍 Sim, transferir</button>
+          <button style="background:#1e293b;border:1px solid #374151;color:#94a3b8;padding:7px 14px;border-radius:20px;font-size:11px;cursor:pointer">Não, continuar aqui</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Quick replies inline</h3>
+      <p>Botões de resposta rápida aparecem logo após a mensagem do agente. Simples e leve.</p>
+    </div>
+  </div>
+
+</div>

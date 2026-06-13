@@ -114,6 +114,13 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ content }),
       }),
+    acceptHumanHandoff: (id: string, contactPhone?: string) =>
+      request<{ success: boolean; channel: 'whatsapp' | 'link'; linkUrl?: string }>(
+        `/conversations/${id}/human-handoff/accept`,
+        { method: 'POST', body: JSON.stringify({ contactPhone }) }
+      ),
+    rejectHumanHandoff: (id: string) =>
+      request<{ success: boolean }>(`/conversations/${id}/human-handoff/reject`, { method: 'POST' }),
   },
 
   // ─── Knowledge ────────────────────────────────────────────────────────────
@@ -365,6 +372,7 @@ export type SendMessagePayload = {
 export type SendMessageOutput = {
   conversationId: string; messageId: string; reply: string
   model: string; tokensUsed: number; isNewConversation: boolean
+  humanHandoffSuggestion?: { reason: string; crewName: string }
 }
 
 export type DepartmentItem = {
@@ -387,11 +395,20 @@ export type IngestDocumentPayload = { title: string; content: string; layer: 'TE
 export type CrewItem = {
   id: string; tenantId: string; departmentId: string | null; name: string; slug: string
   objective: string | null; description: string | null; status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
+  humanHandoffWhatsappNumber?: string | null
+  humanHandoffWebhookUrl?: string | null
   createdAt: string; updatedAt: string
 }
 
 export type CreateCrewPayload = { name: string; departmentId?: string; objective?: string; description?: string }
-export type UpdateCrewPayload = { name?: string; objective?: string; description?: string; status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED' }
+export type UpdateCrewPayload = {
+  name?: string
+  objective?: string
+  description?: string
+  status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
+  humanHandoffWhatsappNumber?: string | null
+  humanHandoffWebhookUrl?: string | null
+}
 
 export type CrewMetricsOutput = {
   totalConversations: number; activeConversations: number; totalMessages: number

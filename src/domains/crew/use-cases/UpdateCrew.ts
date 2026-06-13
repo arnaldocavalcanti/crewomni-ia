@@ -11,6 +11,8 @@ type Input = {
   description?: string
   objective?:   string
   status?:      CrewStatus
+  humanHandoffWhatsappNumber?: string | null
+  humanHandoffWebhookUrl?:     string | null
 }
 
 export class UpdateCrew {
@@ -35,6 +37,8 @@ export class UpdateCrew {
     if (input.description !== undefined) updateData.description = input.description
     if (input.objective   !== undefined) updateData.objective   = input.objective
     if (input.status      !== undefined) updateData.status      = input.status
+    if (input.humanHandoffWhatsappNumber !== undefined) updateData.humanHandoffWhatsappNumber = input.humanHandoffWhatsappNumber
+    if (input.humanHandoffWebhookUrl !== undefined) updateData.humanHandoffWebhookUrl = input.humanHandoffWebhookUrl
 
     const updated = await this.repo.update(input.id, input.tenantId, updateData)
 

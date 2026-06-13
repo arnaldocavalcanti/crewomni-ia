@@ -1,0 +1,47 @@
+<h2>Pergunta 1: Qual o canal do cliente?</h2>
+<p class="subtitle">Quando o agente sugere transferir para humano, onde está o cliente?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Chat Web (Widget)</h3>
+      <p>O cliente está no widget de chat embutido no site/app. A transferência para WhatsApp seria um convite para continuar em outro canal.</p>
+      <div style="margin-top:12px;padding:10px;background:rgba(100,200,255,0.1);border-radius:8px;font-size:13px">
+        <strong>Fluxo:</strong> Widget → Agente AI sugere → Cliente aceita →
+        Sistema envia mensagem para o WhatsApp Business bot →
+        Bot do WhatsApp entra em contato com o cliente (ou cliente recebe link)
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>WhatsApp (já no canal)</h3>
+      <p>O cliente já está conversando via WhatsApp. A transferência é de um número/bot AI para outro número/bot "humano" da crew.</p>
+      <div style="margin-top:12px;padding:10px;background:rgba(100,200,255,0.1);border-radius:8px;font-size:13px">
+        <strong>Fluxo:</strong> WhatsApp → Agente AI sugere → Cliente aceita →
+        Sistema transfere para o WhatsApp Business bot da crew →
+        Bot humano continua no mesmo WhatsApp
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Ambos os canais</h3>
+      <p>A feature deve funcionar tanto para clientes no widget quanto no WhatsApp. O destino é sempre o WhatsApp Business bot da crew.</p>
+      <div style="margin-top:12px;padding:10px;background:rgba(100,200,255,0.1);border-radius:8px;font-size:13px">
+        <strong>Fluxo:</strong> Qualquer canal → Agente AI sugere → Cliente aceita →
+        Sistema notifica o WhatsApp Business bot da crew →
+        Bot assume o atendimento (cliente migra para WhatsApp se necessário)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:24px;padding:16px;background:rgba(255,200,100,0.1);border-left:3px solid #f59e0b;border-radius:4px">
+  <strong>Contexto técnico:</strong> O sistema já possui webhook de WhatsApp configurável por tenant, dispatcher WhatsApp (Meta Cloud API), e endpoints <code>request-handoff</code> / <code>accept-handoff</code>. A peça nova seria: <em>qual WhatsApp Business bot notificar, e como</em>.
+</div>

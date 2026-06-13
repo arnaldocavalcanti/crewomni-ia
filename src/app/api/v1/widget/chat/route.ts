@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
       conversationId: result.conversationId,
       reply: result.reply,
       isNewConversation: result.isNewConversation,
+      humanHandoffSuggestion: result.humanHandoffSuggestion,
     }, { status: 200 })
   } catch (error) {
     return errorResponse(error)

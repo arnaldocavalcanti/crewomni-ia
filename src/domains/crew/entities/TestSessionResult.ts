@@ -41,4 +41,5 @@ export type TestSessionResult = {
   flowPath: FlowPathEntry[]
   handoffs: HandoffEntry[]
   trace: TestSessionTrace
+  humanHandoffSuggestion?: { reason: string; crewName: string }
 }

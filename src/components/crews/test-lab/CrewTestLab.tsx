@@ -33,10 +33,21 @@ export function CrewTestLab({ crewId, crewStatus, members, isAdmin }: Props) {
   const [trace, setTrace] = useState<TestSessionTrace | null>(null)
   const [viewMode, setViewMode] = useState<'flow' | 'trace'>('flow')
 
+  const [handoffState, setHandoffState] = useState<'IDLE' | 'SUGGESTED' | 'ASK_PHONE' | 'COMPLETED_WA' | 'COMPLETED_LINK'>('IDLE')
+  const [handoffCrewName, setHandoffCrewName] = useState<string>('')
+  const [handoffLinkUrl, setHandoffLinkUrl] = useState<string>('')
+  const [phoneInput, setPhoneInput] = useState<string>('')
+  const [handoffReason, setHandoffReason] = useState<string>('')
+
   // Reset session and messages on mode switch
   useEffect(() => {
     setConversationId(undefined)
     setMessages([])
+    setHandoffState('IDLE')
+    setHandoffCrewName('')
+    setHandoffLinkUrl('')
+    setPhoneInput('')
+    setHandoffReason('')
   }, [mode])
 
   const noMembers = members.length === 0
@@ -92,13 +103,110 @@ export function CrewTestLab({ crewId, crewStatus, members, isAdmin }: Props) {
       })
 
       setMessages((prev) => [...prev, ...newMessages])
+
+      if (result.humanHandoffSuggestion) {
+        setHandoffCrewName(result.humanHandoffSuggestion.crewName)
+        setHandoffReason(result.humanHandoffSuggestion.reason)
+        setHandoffState('SUGGESTED')
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao processar mensagem'
       setError(message)
     } finally {
       setIsLoading(false)
     }
-  }, [input, isLoading, crewId, mode, toPhone])
+  }, [input, isLoading, crewId, mode, toPhone, conversationId])
+
+  const handleAcceptHandoff = useCallback(async (phone?: string) => {
+    const activeConvId = conversationId
+    if (!activeConvId) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      let resolvedPhone = phone || (mode === 'WHATSAPP_REAL' ? toPhone : undefined)
+      
+      if (!resolvedPhone && handoffState !== 'ASK_PHONE') {
+        setHandoffState('ASK_PHONE')
+        setIsLoading(false)
+        return
+      }
+
+      const res = await api.conversations.acceptHumanHandoff(activeConvId, resolvedPhone)
+      if (res.channel === 'whatsapp') {
+        setHandoffState('COMPLETED_WA')
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: 'agent',
+            text: `[Sistema] Atendimento transferido com sucesso para WhatsApp de ${handoffCrewName || 'atendente'}.`,
+          },
+        ])
+      } else {
+        setHandoffLinkUrl(res.linkUrl || '')
+        setHandoffState('COMPLETED_LINK')
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: 'agent',
+            text: `[Sistema] Use o link do WhatsApp para falar diretamente com o atendente.`,
+          },
+        ])
+      }
+    } catch (err: any) {
+      setError(err instanceof Error ? err.message : 'Erro ao aceitar handoff')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [conversationId, handoffState, handoffCrewName, mode, toPhone])
+
+  const handleRejectHandoff = useCallback(async () => {
+    const activeConvId = conversationId
+    if (!activeConvId) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      await api.conversations.rejectHumanHandoff(activeConvId)
+      setHandoffState('IDLE')
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'agent',
+          text: `[Sistema] Transferência recusada. Conversa continuará com o agente de inteligência artificial.`,
+        },
+      ])
+    } catch (err: any) {
+      setError(err instanceof Error ? err.message : 'Erro ao rejeitar handoff')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [conversationId])
+
+  const handleSkipPhone = useCallback(async () => {
+    const activeConvId = conversationId
+    if (!activeConvId) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      const res = await api.conversations.acceptHumanHandoff(activeConvId)
+      setHandoffLinkUrl(res.linkUrl || '')
+      setHandoffState('COMPLETED_LINK')
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'agent',
+          text: `[Sistema] Use o link do WhatsApp para falar diretamente com o atendente.`,
+        },
+      ])
+    } catch (err: any) {
+      setError(err instanceof Error ? err.message : 'Erro ao obter link de fallback')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [conversationId])
 
   return (
     <div className="flex flex-col h-full">
@@ -134,6 +242,14 @@ export function CrewTestLab({ crewId, crewStatus, members, isAdmin }: Props) {
             onPhoneChange={setToPhone}
             onInputChange={setInput}
             onSend={handleSend}
+            handoffState={handoffState}
+            handoffCrewName={handoffCrewName}
+            handoffLinkUrl={handoffLinkUrl || undefined}
+            phoneInput={phoneInput}
+            setPhoneInput={setPhoneInput}
+            onAcceptHandoff={handleAcceptHandoff}
+            onRejectHandoff={handleRejectHandoff}
+            onSkipPhone={handleSkipPhone}
           />
         </div>
 

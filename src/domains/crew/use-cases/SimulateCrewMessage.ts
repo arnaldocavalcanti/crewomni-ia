@@ -198,6 +198,7 @@ export class SimulateCrewMessage {
       flowPath,
       handoffs,
       trace,
+      humanHandoffSuggestion: result.humanHandoffSuggestion,
     }
   }
 }

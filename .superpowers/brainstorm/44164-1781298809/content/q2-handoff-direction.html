@@ -1,0 +1,44 @@
+<h2>Pergunta 2: Sentido da transferência</h2>
+<p class="subtitle">Quando o cliente aceita, o que acontece com o WhatsApp Business bot da crew?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Bot entra em contato com o cliente</h3>
+      <p>O sistema envia uma mensagem <strong>proativa</strong> pelo WhatsApp Business bot da crew para o número do cliente, dando continuidade ao atendimento.</p>
+      <div style="margin-top:10px;font-size:13px;padding:10px;background:rgba(100,255,150,0.08);border-radius:8px">
+        Requer: número de WhatsApp do cliente conhecido<br>
+        Resultado: cliente recebe mensagem no WhatsApp continuando a conversa
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Sistema notifica o bot (bot fica aguardando)</h3>
+      <p>O sistema envia um <strong>trigger/webhook</strong> para o WhatsApp Business bot com o contexto da conversa. O bot (ou operador humano atrás dele) age com base nessa notificação.</p>
+      <div style="margin-top:10px;font-size:13px;padding:10px;background:rgba(100,255,150,0.08);border-radius:8px">
+        Requer: endpoint/número do bot para receber o trigger<br>
+        Resultado: operador humano vê o contexto e decide como agir
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Cliente é direcionado para contatar o bot</h3>
+      <p>O chat mostra ao cliente um <strong>link/número de WhatsApp</strong> para ele mesmo iniciar a conversa com o bot da crew. O sistema pode pré-preencher contexto via deep link.</p>
+      <div style="margin-top:10px;font-size:13px;padding:10px;background:rgba(100,255,150,0.08);border-radius:8px">
+        Requer: número do WhatsApp Business da crew<br>
+        Resultado: cliente abre WhatsApp manualmente com mensagem pré-preenchida
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:20px;padding:14px;background:rgba(150,100,255,0.08);border-left:3px solid #8b5cf6;border-radius:4px;font-size:13px">
+  <strong>Nota:</strong> As opções não são exclusivas — ex: A e C podem coexistir (se número do cliente for conhecido, proativo; senão, link).
+</div>

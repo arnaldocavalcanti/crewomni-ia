@@ -34,6 +34,8 @@ export default function EditCrewPage() {
   const [objective, setObjective] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<'DRAFT' | 'ACTIVE' | 'ARCHIVED'>('DRAFT')
+  const [humanHandoffWhatsappNumber, setHumanHandoffWhatsappNumber] = useState('')
+  const [humanHandoffWebhookUrl, setHumanHandoffWebhookUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [notFound, setNotFound] = useState(false)
@@ -51,6 +53,8 @@ export default function EditCrewPage() {
         setObjective(crew.objective ?? '')
         setDescription(crew.description ?? '')
         setStatus(crew.status)
+        setHumanHandoffWhatsappNumber(crew.humanHandoffWhatsappNumber ?? '')
+        setHumanHandoffWebhookUrl(crew.humanHandoffWebhookUrl ?? '')
         const mappedMembers = ((res as any).members ?? []).map((m: any) => ({
           id: m.id,
           agentId: m.agentId,
@@ -81,6 +85,8 @@ export default function EditCrewPage() {
         objective: objective.trim() || undefined,
         description: description.trim() || undefined,
         status,
+        humanHandoffWhatsappNumber: humanHandoffWhatsappNumber.trim() || null,
+        humanHandoffWebhookUrl: humanHandoffWebhookUrl.trim() || null,
       })
       router.push('/dashboard/crews')
       router.refresh()
@@ -257,6 +263,55 @@ export default function EditCrewPage() {
                     {s === 'ACTIVE' ? 'Ativo' : s === 'ARCHIVED' ? 'Arquivado' : 'Rascunho'}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Escalada Humana Section */}
+            <div className="p-4 rounded-xl border border-border bg-card space-y-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <span>Escalada Humana (WhatsApp)</span>
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Configure um bot ou atendente humano no WhatsApp para onde os clientes serão transferidos quando a inteligência artificial sugerir escalada.
+              </p>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="handoffPhone" className="text-xs font-medium">
+                  Número WhatsApp do Atendente/Bot (ex: +5511999990000)
+                </Label>
+                <Input
+                  id="handoffPhone"
+                  value={humanHandoffWhatsappNumber}
+                  onChange={(e) => setHumanHandoffWhatsappNumber(e.target.value)}
+                  placeholder="Ex: +5511999990000"
+                  maxLength={30}
+                />
+                {humanHandoffWhatsappNumber.trim() && (
+                  <div className="text-xs text-muted-foreground">
+                    Link de teste:{" "}
+                    <a
+                      href={`https://wa.me/${humanHandoffWhatsappNumber.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#4F6EF7] hover:underline font-mono"
+                    >
+                      wa.me/{humanHandoffWhatsappNumber.replace(/\D/g, '')}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="handoffWebhook" className="text-xs font-medium">
+                  URL do Webhook de Notificação (opcional)
+                </Label>
+                <Input
+                  id="handoffWebhook"
+                  value={humanHandoffWebhookUrl}
+                  onChange={(e) => setHumanHandoffWebhookUrl(e.target.value)}
+                  placeholder="Ex: https://n8n.suaempresa.com/webhook/handoff"
+                  type="url"
+                />
               </div>
             </div>
 

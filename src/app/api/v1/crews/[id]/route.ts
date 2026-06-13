@@ -10,6 +10,8 @@ const updateSchema = z.object({
   description: z.string().max(500).optional(),
   objective:   z.string().max(500).optional(),
   status:      z.nativeEnum(CrewStatus).optional(),
+  humanHandoffWhatsappNumber: z.string().max(30).nullable().optional(),
+  humanHandoffWebhookUrl: z.string().url().or(z.literal("")).nullable().optional(),
 })
 
 export async function GET(

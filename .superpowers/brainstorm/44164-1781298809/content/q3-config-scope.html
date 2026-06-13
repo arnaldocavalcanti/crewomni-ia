@@ -1,0 +1,44 @@
+<h2>Pergunta 3: Onde fica o número do WhatsApp Business bot?</h2>
+<p class="subtitle">Cada crew pode ter seu próprio bot, ou é um único por tenant?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Por Crew <span style="font-size:12px;color:#06b6d4;margin-left:8px">recomendado</span></h3>
+      <p>Cada crew tem seu próprio WhatsApp Business bot configurado. A crew de Vendas usa um bot, a crew de Suporte usa outro.</p>
+      <div style="margin-top:10px;font-size:13px;padding:10px;background:rgba(100,255,150,0.08);border-radius:8px">
+        Configuração na tela de detalhes da crew → campo "WhatsApp Bot de Escalada"<br>
+        Máxima flexibilidade para empresas com múltiplas crews especializadas
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Por Tenant (global)</h3>
+      <p>Todas as crews do mesmo tenant usam o mesmo WhatsApp Business bot para escaladas humanas.</p>
+      <div style="margin-top:10px;font-size:13px;padding:10px;background:rgba(100,255,150,0.08);border-radius:8px">
+        Configuração em Settings/Channels do tenant<br>
+        Mais simples, mas sem granularidade por crew
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Ambos (herança)</h3>
+      <p>Crew pode ter seu próprio bot; se não configurado, herda o bot padrão do tenant.</p>
+      <div style="margin-top:10px;font-size:13px;padding:10px;background:rgba(100,255,150,0.08);border-radius:8px">
+        Modelo de herança: crew.humanHandoffWhatsapp ?? tenant.defaultHandoffWhatsapp<br>
+        Mais complexo de implementar, mas máxima usabilidade
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:20px;padding:14px;background:rgba(255,200,100,0.08);border-left:3px solid #f59e0b;border-radius:4px;font-size:13px">
+  <strong>Contexto técnico:</strong> A entidade <code>Crew</code> atualmente tem: id, tenantId, departmentId, name, slug, description, objective, status. O campo novo seria adicionado aqui ou em <code>ChannelConfig</code>.
+</div>

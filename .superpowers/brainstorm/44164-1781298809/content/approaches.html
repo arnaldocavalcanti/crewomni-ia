@@ -1,0 +1,83 @@
+<h2>3 Abordagens Arquiteturais</h2>
+<p class="subtitle">Para o handoff humano via WhatsApp Business bot por crew</p>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>WhatsApp-native <span style="font-size:11px;background:#06b6d4;color:#000;padding:2px 8px;border-radius:10px;margin-left:8px">Recomendado</span></h3>
+      <p>Tudo via WhatsApp. Sem webhooks externos. O bot recebe uma mensagem WA com contexto e age por conta própria.</p>
+      <div style="margin-top:10px;font-size:12px">
+        <strong>Fluxo:</strong>
+        <ol style="margin:6px 0 0 16px;line-height:1.8">
+          <li>Agente AI chama tool <code>suggest_human_handoff</code></li>
+          <li>Quick reply aparece no chat do cliente</li>
+          <li>Cliente aceita → sistema pergunta número WA (se não conhecido)</li>
+          <li>Dispatcher envia WA ao <strong>cliente</strong>: "Transferido! Nossa equipe entrará em contato em breve."</li>
+          <li>Dispatcher envia WA ao <strong>bot da crew</strong>: "HANDOFF: Cliente [nome/tel] | Resumo: [IA gera] | Últimas msgs: [transcript]"</li>
+          <li>Bot reage e entra em contato com o cliente</li>
+        </ol>
+      </div>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Zero infra extra</li><li>Config mínima: só o número</li><li>Usa dispatcher já existente</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Bot parseia texto (menos estruturado)</li><li>Limite de tamanho da msg WA</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>WA ao cliente + Webhook ao bot</h3>
+      <p>Mensagem WA proativa ao cliente (Flow A) + POST estruturado JSON para URL do bot (Flow B).</p>
+      <div style="margin-top:10px;font-size:12px">
+        <strong>Config por crew:</strong>
+        <ul style="margin:6px 0 0 16px;line-height:1.8">
+          <li><code>humanHandoffWhatsappNumber</code> → número do cliente</li>
+          <li><code>humanHandoffWebhookUrl</code> → URL que recebe JSON</li>
+        </ul>
+        <strong style="display:block;margin-top:8px">Payload webhook:</strong>
+        <code style="font-size:11px;display:block;padding:6px;background:rgba(0,0,0,0.3);border-radius:4px;margin-top:4px">{ contactName, contactPhone, crewName, summary, transcript[] }</code>
+      </div>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>JSON estruturado ao bot</li><li>Mais robusto p/ n8n/ManyChat</li><li>Payload ilimitado</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>2 configs por crew</li><li>Bot precisa de servidor HTTP</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Híbrido com fallback automático</h3>
+      <p>Tenta A (WA nativo) como padrão. Se o crew tiver webhook configurado, usa B adicionalmente.</p>
+      <div style="margin-top:10px;font-size:12px">
+        <strong>Lógica:</strong>
+        <ol style="margin:6px 0 0 16px;line-height:1.8">
+          <li>Sempre envia WA ao cliente (se número disponível)</li>
+          <li>Sempre envia WA ao bot da crew</li>
+          <li><em>Se</em> <code>crew.humanHandoffWebhookUrl</code> existir → também dispara webhook JSON</li>
+        </ol>
+        <p style="margin-top:8px;color:#94a3b8;font-size:11px">Permite upgrade progressivo: começa simples (A), adiciona webhook (B) sem mudar o fluxo.</p>
+      </div>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Evolução sem breaking change</li><li>Config opcional</li><li>Cobre todos os cenários</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Mais código para testar</li><li>Complexidade incremental</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:20px;padding:14px;background:rgba(6,182,212,0.08);border-left:3px solid #06b6d4;border-radius:4px;font-size:13px">
+  <strong>Componentes comuns às 3 abordagens:</strong>
+  <ul style="margin:8px 0 0 16px;line-height:1.8">
+    <li>Campo <code>humanHandoffWhatsappNumber</code> na entidade <code>Crew</code></li>
+    <li>Tool LLM: <code>suggest_human_handoff(reason)</code></li>
+    <li>API: <code>POST /api/v1/conversations/:id/human-handoff/accept</code></li>
+    <li>Novo status de conversa: <code>TRANSFERRED_TO_HUMAN</code></li>
+    <li>AI para de responder após transferência</li>
+    <li>UI quick replies no widget + fallback "pedir número" + link click-to-chat</li>
+  </ul>
+</div>

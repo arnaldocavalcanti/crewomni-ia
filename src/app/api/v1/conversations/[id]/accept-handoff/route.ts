@@ -10,7 +10,7 @@ export async function POST(
   try {
     const [session, { id }] = await Promise.all([getSession(request), params])
 
-    const result = await di.acceptHumanHandoff.execute({
+    const result = await di.acceptHumanHandoffLifecycle.execute({
       conversationId: id,
       tenantId: session.tenantId!,
       operatorId: session.userId,

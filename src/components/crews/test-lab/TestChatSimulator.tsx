@@ -26,11 +26,22 @@ type Props = {
   onPhoneChange: (phone: string) => void
   onInputChange: (text: string) => void
   onSend: () => void
+
+  handoffState: 'IDLE' | 'SUGGESTED' | 'ASK_PHONE' | 'COMPLETED_WA' | 'COMPLETED_LINK'
+  handoffCrewName?: string
+  handoffLinkUrl?: string
+  phoneInput: string
+  setPhoneInput: (phone: string) => void
+  onAcceptHandoff: (phone?: string) => void
+  onRejectHandoff: () => void
+  onSkipPhone: () => void
 }
 
 export function TestChatSimulator({
   messages, mode, toPhone, input, isLoading, error,
   onModeChange, onPhoneChange, onInputChange, onSend,
+  handoffState, handoffCrewName, handoffLinkUrl,
+  phoneInput, setPhoneInput, onAcceptHandoff, onRejectHandoff, onSkipPhone,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -152,24 +163,114 @@ export function TestChatSimulator({
         <div ref={bottomRef} />
       </div>
 
-      <div className="p-3 border-t border-border bg-[#f0f2f5] dark:bg-muted/20 flex gap-2">
-        <Input
-          placeholder="Digite uma mensagem de teste..."
-          value={input}
-          onChange={(e) => onInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isLoading}
-          className="flex-1 text-sm bg-white dark:bg-card"
-        />
-        <Button
-          onClick={onSend}
-          disabled={isLoading || !input.trim()}
-          size="sm"
-          className="bg-gradient-to-r from-[#06C8E8] via-[#4F6EF7] to-[#7C3AED] text-white hover:opacity-90"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
+      {handoffState === 'SUGGESTED' && (
+        <div className="p-3 border-t border-border bg-[#f0f2f5] dark:bg-muted/20 flex flex-col gap-2 items-center">
+          <div className="text-xs text-muted-foreground text-center">
+            O agente sugeriu transferir o atendimento para a equipe <strong>{handoffCrewName}</strong>. Deseja transferir?
+          </div>
+          <div className="flex gap-2 w-full justify-center">
+            <Button
+              onClick={() => onAcceptHandoff()}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-1.5 px-4 rounded-full"
+              disabled={isLoading}
+            >
+              👍 Sim, transferir
+            </Button>
+            <Button
+              onClick={onRejectHandoff}
+              variant="outline"
+              className="text-xs py-1.5 px-4 rounded-full border-border hover:bg-muted/50"
+              disabled={isLoading}
+            >
+              Não, continuar aqui
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {handoffState === 'ASK_PHONE' && (
+        <div className="p-4 border-t border-border bg-[#f0f2f5] dark:bg-muted/20 space-y-3">
+          <div className="text-xs text-foreground font-medium">
+            Para continuar pelo WhatsApp, qual é o seu número?
+          </div>
+          <div className="flex gap-2">
+            <Input
+              id="handoffCustomerPhone"
+              placeholder="+55 11 99999-9999"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              className="flex-1 text-xs bg-white dark:bg-card h-8"
+              disabled={isLoading}
+            />
+            <Button
+              onClick={() => onAcceptHandoff(phoneInput)}
+              className="bg-[#4F6EF7] text-white text-xs h-8"
+              disabled={isLoading || !phoneInput.trim()}
+            >
+              Confirmar
+            </Button>
+          </div>
+          <div className="text-center">
+            <button
+              onClick={onSkipPhone}
+              className="text-xs text-[#4F6EF7] hover:underline"
+              disabled={isLoading}
+            >
+              Prefiro não informar → falar no WhatsApp direto
+            </button>
+          </div>
+        </div>
+      )}
+
+      {handoffState === 'COMPLETED_WA' && (
+        <div className="p-4 border-t border-border bg-emerald-50 dark:bg-emerald-950/20 text-center space-y-2">
+          <div className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold flex items-center justify-center gap-1.5">
+            <span>✓ Transferência realizada!</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Você receberá uma mensagem no WhatsApp em instantes. O atendimento automatizado foi encerrado.
+          </p>
+        </div>
+      )}
+
+      {handoffState === 'COMPLETED_LINK' && (
+        <div className="p-4 border-t border-border bg-emerald-50 dark:bg-emerald-950/20 text-center space-y-3">
+          <div className="text-xs text-muted-foreground mb-1">
+            Tudo bem! Você pode continuar pelo WhatsApp clicando no botão abaixo:
+          </div>
+          {handoffLinkUrl && (
+            <a
+              href={handoffLinkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba5a] text-white text-xs font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors w-full"
+            >
+              <span>💬 Falar no WhatsApp</span>
+            </a>
+          )}
+        </div>
+      )}
+
+      {handoffState === 'IDLE' && (
+        <div className="p-3 border-t border-border bg-[#f0f2f5] dark:bg-muted/20 flex gap-2">
+          <Input
+            placeholder="Digite uma mensagem de teste..."
+            value={input}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isLoading}
+            className="flex-1 text-sm bg-white dark:bg-card"
+          />
+          <Button
+            onClick={onSend}
+            disabled={isLoading || !input.trim()}
+            size="sm"
+            className="bg-gradient-to-r from-[#06C8E8] via-[#4F6EF7] to-[#7C3AED] text-white hover:opacity-90"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

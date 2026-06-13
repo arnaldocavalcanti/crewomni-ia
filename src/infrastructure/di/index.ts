@@ -126,7 +126,11 @@ import { SummarizeConversation } from '@/domains/memory-policy/use-cases/Summari
 import { OrchestrateInboundMessage } from '@/domains/orchestration/use-cases/OrchestrateInboundMessage'
 import { ApplyLifecycleTransition } from '@/domains/conversation-lifecycle/use-cases/ApplyLifecycleTransition'
 import { RequestHumanHandoff } from '@/domains/conversation-lifecycle/use-cases/RequestHumanHandoff'
-import { AcceptHumanHandoff } from '@/domains/conversation-lifecycle/use-cases/AcceptHumanHandoff'
+import { AcceptHumanHandoff as AcceptHumanHandoffLifecycle } from '@/domains/conversation-lifecycle/use-cases/AcceptHumanHandoff'
+import { AcceptHumanHandoff } from '@/domains/conversation/use-cases/AcceptHumanHandoff'
+import { SuggestHumanHandoff } from '@/domains/conversation/use-cases/SuggestHumanHandoff'
+import { PrismaHumanHandoffRepository } from '@/infrastructure/db/repositories/PrismaHumanHandoffRepository'
+import { InMemoryHumanHandoffRepository } from '@/infrastructure/db/repositories/InMemoryHumanHandoffRepository'
 
 // Prisma Harness Repos
 import { PrismaInboundEventRepository } from '@/infrastructure/db/repositories/PrismaInboundEventRepository'
@@ -215,6 +219,7 @@ const identityRepo     = usePrisma ? new PrismaContactChannelIdentityRepository(
 const summaryRepo      = usePrisma ? new PrismaConversationSummaryRepository() : new InMemoryConversationSummaryRepository()
 const contactMemoryRepo = usePrisma ? new PrismaContactMemoryRepository() : new InMemoryContactMemoryRepository()
 const lifecycleRepo    = usePrisma ? new PrismaConversationLifecycleRepository() : new InMemoryConversationLifecycleRepository()
+const humanHandoffRepo = usePrisma ? new PrismaHumanHandoffRepository(getPrismaClient()) : new InMemoryHumanHandoffRepository()
 
 // ─── Providers ────────────────────────────────────────────────────────────────
 
@@ -242,7 +247,7 @@ const memoryPolicy        = new ApplyMemoryPolicy(conversationRepo, summaryRepo,
 const summarizeConversation = new SummarizeConversation(conversationRepo, summaryRepo, llmProvider)
 const applyLifecycleTransition = new ApplyLifecycleTransition(conversationRepo, lifecycleRepo)
 const requestHumanHandoff = new RequestHumanHandoff(applyLifecycleTransition)
-const acceptHumanHandoff = new AcceptHumanHandoff(applyLifecycleTransition)
+const acceptHumanHandoffLifecycle = new AcceptHumanHandoffLifecycle(applyLifecycleTransition)
 
 // Distillation
 const runKDL = new RunKDL(kdlInsightRepo, conversationRepo, tenantRepo, llmProvider)
@@ -321,7 +326,10 @@ export const di = {
   summarizeConversation,
   applyLifecycleTransition,
   requestHumanHandoff,
-  acceptHumanHandoff,
+  acceptHumanHandoffLifecycle,
+  acceptHumanHandoff: null as unknown as AcceptHumanHandoff,
+  suggestHumanHandoff: null as unknown as SuggestHumanHandoff,
+  humanHandoffRepo,
   orchestrateInboundMessage: null as unknown as OrchestrateInboundMessage,
   // Distillation
   kdlInsightRepo,
@@ -342,6 +350,15 @@ export const di = {
   getAgentMetrics: new GetAgentMetrics(analyticsRepo),
 }
 
+di.suggestHumanHandoff = new SuggestHumanHandoff(crewRepo)
+di.acceptHumanHandoff = new AcceptHumanHandoff(
+  conversationRepo,
+  crewRepo,
+  identityRepo,
+  humanHandoffRepo,
+  new WhatsAppDispatcher(channelConfigRepo)
+)
+
 // SendMessage depende de di.buildRAGContext — resolvido após criação do objeto
 di.sendMessage = new SendMessage(
   conversationRepo,
@@ -356,6 +373,7 @@ di.sendMessage = new SendMessage(
   di.checkUsageLimit,
   di.recordUsage,
   new EmailDispatcher(channelConfigRepo),
+  di.suggestHumanHandoff,
 )
 
 di.simulateCrewMessage = new SimulateCrewMessage(
